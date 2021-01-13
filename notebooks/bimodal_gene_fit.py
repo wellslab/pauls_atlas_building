@@ -34,7 +34,6 @@ gene_list      = [
 data = pd.DataFrame(index=main_ensembl_ids)
 for i_fname in dataset_list:
     data = data.merge(pd.read_csv(i_fname, sep='\t'), how='left', left_index=True, right_index=True)
-data = np.log2(1.e6*data/data.sum()+1)
 
 #data           = pd.read_csv('/Users/pwangel/Downloads/pluripotent_atlas_data.tsv', sep='\t', index_col=0)
 annotations    = pd.read_csv('/Users/pwangel/Downloads/pluripotent_annotations.tsv', sep='\t', index_col=0)
@@ -48,6 +47,18 @@ genes = genes_s4m.merge(genes_conversion, how='left', left_index=True, right_ind
 annotations = annotations.loc[np.in1d(annotations.Dataset.values.astype(int), [7124, 7135, 7240, 6884, 7253])]
 annotations = annotations.loc[np.in1d(annotations.LM_Group_COLOR, ['naive', 'primed'])]
 data = data[annotations.chip_id] #Not sure if the samples are in the right order
+
+# Add some single cell data
+
+sc_data     = pd.read_csv('/Users/pwangel/Data/Single_Cell/Han/aggregated_by_cluster_100_0pt0.tsv', sep='\t', index_col=0)
+sc_annotations = pd.read_csv('/Users/pwangel/Data/Single_Cell/Han/aggregated_by_cluster_metadata_100_0pt0.tsv', sep='\t', index_col=0)
+sc_annotations['LM_Group_COLOR'] = sc_annotations.celltype.values
+
+data = data.merge(sc_data, how='inner', left_index=True, right_index=True).fillna(0.0)
+annotations = pd.concat([annotations, sc_annotations])
+
+#data = np.log2(1.e6*data/data.sum()+1)
+data = functions.transform_to_percentile(data)
 
 cut_data    = data
 all_ranked_data = data

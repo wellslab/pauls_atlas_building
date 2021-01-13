@@ -1,4 +1,4 @@
-import numpy, pandas, sys, os, scipy.stats, sklearn.decomposition, wpca
+import numpy, pandas, sys, os, scipy.stats, sklearn.decomposition
 sys.path.append("/Users/pwangel/Gene_Analysis")
 
 # Read in and find cut
