@@ -57,6 +57,7 @@ sc_annotations['LM_Group_COLOR'] = sc_annotations.celltype.values
 data = data.merge(sc_data, how='inner', left_index=True, right_index=True).fillna(0.0)
 annotations = pd.concat([annotations, sc_annotations])
 
+# Choose normalisation or transformation
 #data = np.log2(1.e6*data/data.sum()+1)
 data = functions.transform_to_percentile(data)
 

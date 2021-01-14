@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# This is an example notebook walking through the construction of the atlas
+
 # In[1]:
 
 
@@ -35,7 +37,7 @@ genes          = pd.read_csv('/Users/pwangel/Downloads/myeloid_atlas_genes.tsv',
 data = functions.transform_to_percentile(data)
 
 
-# Only need to compute gene variance fraction if not done already
+# Only need to compute gene variance fraction if not done already, in the above we have already read a previously calculated version into the gene dataframe
 
 # In[6]:
 
@@ -52,6 +54,8 @@ pca.fit(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.va
 pca_coords = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.2]).transpose())
 
 
+# Plot the pca
+
 # In[33]:
 
 
@@ -64,14 +68,10 @@ functions.plot_pca(pca_coords, annotations,pca,                    labels=['cell
 functions.plot_gene_platform_dependence_distribution(data, annotations, genes)
 
 
+# Make a graph of the threshold lowering process using the Kruskal Wallis H Test
+
 # In[ ]:
 
 
 functions.plot_KW_Htest(data, annotations, genes)
-
-
-# In[ ]:
-
-
-
 

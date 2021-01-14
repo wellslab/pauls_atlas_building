@@ -33,4 +33,7 @@ Contains basic functions used to build the atlas. the dataframe or data object i
 
 	plot_pca(pca_coords, annotations, pca, labels, colour_dict)
 		Plots the 3d atlas. Variables to plot and colour dictionary to use are optional - pass a list of variables into labels e.g. ['Dataset', 'celltype', 'Platform_Category']. 
+
+
+
  
