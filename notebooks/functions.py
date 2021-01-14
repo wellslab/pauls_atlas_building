@@ -239,7 +239,7 @@ def resample_clustering(data, annotations, resample_strategy, n_resamples=200, n
 
     return results, retained_genes_list
 
-def calc_H_index(dataframe):
+def calc_H_index(clustering_dataframe):
 
     '''
     Calculate H index of from a dataframe of resampled iterations
@@ -247,7 +247,7 @@ def calc_H_index(dataframe):
     Parameters
     ---------
 
-    dataframe
+    clustering_dataframe
         The first column of the dataframe should be the 'true' reference set
         Agnostic as to the class labels used and they don't have to be consistent across resampling iterations
 
@@ -259,27 +259,27 @@ def calc_H_index(dataframe):
 
     h_index_per_cluster = []
 
-    for i_cluster in dataframe.iloc[:,0].unique():
+    for i_cluster in clustering_dataframe.iloc[:,0].unique():
 
-        samples_in_cluster_i = dataframe.loc[dataframe.iloc[:,0].values == i_cluster].index.values
+        samples_in_cluster_i = clustering_dataframe.loc[clustering_dataframe.iloc[:,0].values == i_cluster].index.values
         max_similarity_list  = []
 
-        for i_resample in range(1, dataframe.shape[1]):
+        for i_resample in range(1, clustering_dataframe.shape[1]):
 
             # Should only compare to samples that were present in the resample (samples may be ommitted in a given iteration of resampling)
-            samples_to_compare   = np.intersect1d(samples_in_cluster_i, dataframe.iloc[:, i_resample].dropna().index.values) 
+            samples_to_compare   = np.intersect1d(samples_in_cluster_i, clustering_dataframe.iloc[:, i_resample].dropna().index.values) 
 
             temp_similarity = []
 
-            for j_cluster in dataframe.iloc[:,i_resample].dropna().unique():
+            for j_cluster in clustering_dataframe.iloc[:,i_resample].dropna().unique():
 
-                samples_in_cluster_j = dataframe.loc[dataframe.iloc[:,i_resample].values == j_cluster].index.values
+                samples_in_cluster_j = clustering_dataframe.loc[clustering_dataframe.iloc[:,i_resample].values == j_cluster].index.values
 
                 temp_similarity.append(np.intersect1d(samples_in_cluster_j, samples_to_compare).shape[0]/np.union1d(samples_in_cluster_j, samples_to_compare).shape[0])
 
             max_similarity_list.append(max(temp_similarity))
 
-        h_index = max([h for h in np.arange(0,1.0,0.001) if (np.array(max_similarity_list)>=h).astype(int).sum()/(dataframe.shape[1]-1)>=h])
+        h_index = max([h for h in np.arange(0,1.0,0.001) if (np.array(max_similarity_list)>=h).astype(int).sum()/(clustering_dataframe.shape[1]-1)>=h])
 
         h_index_per_cluster.append(h_index)    
 
@@ -380,18 +380,11 @@ def plot_KW_Htest(data, annotations, varPart_df):
     return platform_kruskal
 
     
-def plot_gene_platform_dependence_distribution(data, annotations, varPart_df):
+def plot_gene_platform_dependence_distribution(varPart_df):
 
     '''
     Parameters
     ----------
-
-    data
-        Expression values, index as genes, columns as samples
-
-    annotations
-        Metadata, index as samples, columns as properties 
-        Must have a 'Platform_Category' column
 
     varPart_df
         Dataframe contains fraction of variance due to platform under the column 'Platform_VarFraction'
@@ -402,18 +395,11 @@ def plot_gene_platform_dependence_distribution(data, annotations, varPart_df):
                 layout=Layout(xaxis_title="Platform Variance Fraction Threshold", yaxis_title="N Genes", width=700, height=700))
     iplot(fig)
 
-def plot_gene_platform_dependence_cumulative_distribution(data, annotations, varPart_df):
+def plot_gene_platform_dependence_cumulative_distribution(varPart_df):
 
     '''
     Parameters
     ----------
-
-    data
-        Expression values, index as genes, columns as samples
-
-    annotations
-        Metadata, index as samples, columns as properties 
-        Must have a 'Platform_Category' column
 
     varPart_df
         Dataframe contains fraction of variance due to platform under the column 'Platform_VarFraction'
