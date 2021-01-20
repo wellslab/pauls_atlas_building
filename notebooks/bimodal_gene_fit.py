@@ -31,9 +31,10 @@ gene_list      = [
                   ]
 
 
-data = pd.DataFrame(index=main_ensembl_ids)
+#data = pd.DataFrame(index=main_ensembl_ids)
+data = pd.DataFrame()
 for i_fname in dataset_list:
-    data = data.merge(pd.read_csv(i_fname, sep='\t'), how='left', left_index=True, right_index=True)
+    data = data.merge(pd.read_csv(i_fname, sep='\t'), how='outer', left_index=True, right_index=True)
 
 #data           = pd.read_csv('/Users/pwangel/Downloads/pluripotent_atlas_data.tsv', sep='\t', index_col=0)
 annotations    = pd.read_csv('/Users/pwangel/Downloads/pluripotent_annotations.tsv', sep='\t', index_col=0)

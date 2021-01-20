@@ -12,8 +12,8 @@ main_ensembl_ids = pd.read_csv('/Users/pwangel/Data/ensembl_hg38.91/ensembl_hg38
 dataset_list = ['/Users/pwangel/Data/ensembl_hg38.91/RNASeq_Data/7124/source/processed.hg38.91.20180713-201511/gene_count_frags.txt', 
                 '/Users/pwangel/Data/ensembl_hg38.91/RNASeq_Data/7135/source/processed.hg38.91.20180716-154848/gene_count_frags.txt',
                 '/Users/pwangel/Data/ensembl_hg38.91/RNASeq_Data/7240/source/processed.hg38.91.20180718-124924/gene_count_frags.txt', 
-                '/Users/pwangel/Data/ensembl_hg38.91/RNASeq_Data/7253/source/processed.hg38.91.20180815-171954/gene_count_frags.txt', 
-                '/Users/pwangel/Data/ensembl_hg38.91/RNASeq_Data/6884/source/processed.hg38.91.20180627-112849/gene_count_frags.txt']
+                '/Users/pwangel/Data/ensembl_hg38.91/RNASeq_Data/7253/source/processed.hg38.91.20180815-171954/gene_count_frags.txt']
+                #'/Users/pwangel/Data/ensembl_hg38.91/RNASeq_Data/6884/source/processed.hg38.91.20180627-112849/gene_count_frags.txt']
 
 gene_list      = [
                   'KLF4',
@@ -32,9 +32,10 @@ gene_list      = [
                   ]
 
 
-data = pd.DataFrame(index=main_ensembl_ids)
+#data = pd.DataFrame(index=main_ensembl_ids)
+data = pd.DataFrame()
 for i_fname in dataset_list:
-    data = data.merge(pd.read_csv(i_fname, sep='\t'), how='left', left_index=True, right_index=True)
+    data = data.merge(pd.read_csv(i_fname, sep='\t'), how='outer', left_index=True, right_index=True)
 
 #data           = pd.read_csv('/Users/pwangel/Downloads/pluripotent_atlas_data.tsv', sep='\t', index_col=0)
 annotations = pd.read_csv('/Users/pwangel/Downloads/pluripotent_annotations.tsv', sep='\t', index_col=0)
@@ -45,7 +46,7 @@ genes_conversion  = pd.read_csv('/Users/pwangel/Data/ensembl_hg38.91/gene_to_sym
 genes_conversion  = genes_conversion.loc[main_ensembl_ids]
 genes = genes_s4m.merge(genes_conversion, how='left', left_index=True, right_index=True)
 
-annotations = annotations.loc[np.in1d(annotations.Dataset.values.astype(int), [7124, 7135, 7240, 6884, 7253])]
+annotations = annotations.loc[np.in1d(annotations.Dataset.values.astype(int), [7124, 7135, 7240, 7253])]#, 6884, 7253])]
 annotations = annotations.loc[np.in1d(annotations.LM_Group_COLOR, ['naive', 'primed'])]
 data = data[annotations.chip_id] #Not sure if the samples are in the right order
 
@@ -68,6 +69,7 @@ for i_gene in gene_list:
                        size=0.05)
             ))
 
-    fig.update_layout(barmode='overlay')
+    #fig.update_layout(barmode='overlay')
+    fig.update_layout(barmode='stack')
     fig.update_traces(opacity=0.5)
     plot(fig, auto_open=False, filename='/users/pwangel/PlotlyWorkspace/combine_data/naive_stemcells/stemcells_gene_distributions_%s.html' %i_gene)

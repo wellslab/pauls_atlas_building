@@ -503,3 +503,28 @@ def plot_pca(pca_coords, annotations, pca, labels, colour_dict):
             )
 
     iplot(fig)
+
+
+def plot_dot_plots(dataframe, annotations, cell_property, cell_colour_by, gene_list, output_dir):
+
+    import seaborn as sns
+    import matplotlib.pyplot as pyplot
+    sns.set(style="ticks")
+    
+    for i_gene in gene_list:
+   
+        print(i_gene) 
+        df_violin  = pd.DataFrame(columns=['Expression', 'Cell Property', 'Cell Colour'])
+        df_violin['Expression'] = dataframe.loc[i_gene].values.flatten().astype(float)
+        df_violin['Cell Property'] = annotations[cell_property].values.flatten()
+        df_violin['Cell Colour'] = annotations[cell_colour_by].values.flatten()
+
+        fig, ax = pyplot.subplots(1,1, figsize=(13.5,7.0))
+        ax = sns.swarmplot(x="Cell Property", y="Expression", size=9, hue='Cell Colour', data=df_violin)
+    
+        pyplot.ylabel(i_gene+' Expression')
+        pyplot.ylim(df_violin['Expression'].min(), df_violin['Expression'].max())
+        #pyplot.show()
+        pyplot.savefig(output_dir+'/%s_dotplot.pdf' %i_gene)
+        ax.remove()
+        pyplot.close()
