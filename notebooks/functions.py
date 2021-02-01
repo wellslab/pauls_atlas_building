@@ -74,7 +74,7 @@ def calculate_platform_dependence(data, annotations):
 
     return output_df
 
-def calculate_celltype_dependence(data, annotations, gene=None):
+def calculate_celltype_dependence(data, annotations, gene=None, pval=False):
 
     '''
     Calculates the fraction of variance due to celltype and platform. Copied from Yidi Deng's work. BUT NOT WORKING AT THE MOMENT.
@@ -106,11 +106,12 @@ def calculate_celltype_dependence(data, annotations, gene=None):
     else:
         genes_to_iterate = gene
 
-    output_df = pd.DataFrame(index=genes_to_iterate, columns=['Platform_VarFraction', 'celltype_VarFraction'])
+    output_df = pd.DataFrame(index=genes_to_iterate, columns=['Platform_VarFraction', 'celltype_VarFraction', 'celltype_pval'])
     temp_data = data.copy().transpose().merge(annotations[['Platform_Category', 'celltype']], how='left', left_index=True, right_index=True)
 
     temp_data["group"] = 1                                                                                                            
     vcf = {"celltype": "0 + C(celltype)", "Platform_Category": "0 + C(Platform_Category)"} 
+    vcf_nocelltype = {"Platform_Category": "0 + C(Platform_Category)"}
 
     for i in range(len(genes_to_iterate)):
 
@@ -121,23 +122,19 @@ def calculate_celltype_dependence(data, annotations, gene=None):
                                 vc_formula=vcf, re_formula=None, data=temp_data)  
         mdf = md.fit(reml=True,method="powell")
 
-        '''
-        platform_fit = temp_data.Platform_Category.copy()
-
-        for i_platform in annotations.Platform_Category.unique().astype(str):
-
-            sel = np.core.defchararray.count(mdf.random_effects[1].index.values.astype(str), "["+i_platform+"]") > 0
-            platform_fit.loc[temp_data.Platform_Category==i_platform] = mdf.random_effects[1].values[sel][0] 
-
-        celltype_fit = mdf.fittedvalues-platform_fit.values-mdf.params.Intercept
-        print(mdf.summary(), celltype_fit.std(), platform_fit.std())
-
-        output_df.loc[i_gene, 'Platform_VarFraction'] = platform_fit.std()**2/(platform_fit.std()**2+celltype_fit.std()**2+mdf.resid.std()**2)
-        output_df.loc[i_gene, 'celltype_VarFraction'] = celltype_fit.std()**2/(platform_fit.std()**2+celltype_fit.std()**2+mdf.resid.std()**2)
-        '''
-
         output_df.loc[i_gene, 'Platform_VarFraction'] = mdf.vcomp[0]/(mdf.vcomp.sum()+mdf.scale)
         output_df.loc[i_gene, 'celltype_VarFraction'] = mdf.vcomp[1]/(mdf.vcomp.sum()+mdf.scale)
+
+        if pval:
+
+            md_nocelltype  = sm.MixedLM.from_formula("%s ~ 1" %str(i_gene), groups="group",                                                    
+                                vc_formula=vcf_nocelltype, re_formula=None, data=temp_data)  
+            mdf_nocelltype = md.fit(reml=True,method="powell")
+
+            output_df.loc[i_gene, 'celltype_pval'] = sm.stats.anova_lm(mdf, mdf_nocelltype)['PR(>F)'] 
+
+    if not pval:
+        output_df.drop(labels=['celltype_pval'], axis=1)
 
     return output_df
 
