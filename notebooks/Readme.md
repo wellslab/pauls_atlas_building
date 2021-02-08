@@ -1,6 +1,7 @@
 ## Folder structure
 
-functions.py <\br>
+functions.py
+
 Contains basic functions used to build the atlas.
 
  
