@@ -412,7 +412,7 @@ def plot_gene_platform_dependence_cumulative_distribution(varPart_df):
 
 more_colour_list = ['red', 'green', 'black', 'yellow', 'brown', 'coral', 'sandybrown', 'darkorange', 'olive', 'limegreen', 'lightseagreen']
 
-def plot_pca(pca_coords, annotations, pca, labels, colour_dict):
+def plot_pca(pca_coords, annotations, pca, labels, colour_dict, pcs=[1,2,3], out_file=None):
 
     '''
     Generate PCA plot of Atlas
@@ -467,13 +467,21 @@ def plot_pca(pca_coords, annotations, pca, labels, colour_dict):
 
         visibility_list = (visibility_df.label.values==i_label).tolist()
 
-        for i_annotation, i_pca_coords in zip(annotations, pca_coords):
+        for i in range(len(annotations)):
+        #for i_annotation, i_pca_coords in zip(annotations, pca_coords):
+            i_annotation = annotations[i]
+            i_pca_coords = pca_coords[i]
+
+            if (i==0) and len(annotations)>1:
+                opac = 0.3
+            else:
+                opac = 0.9
 
             if (i_annotation[i_label].dtype==np.float64()) and (i_label!='Dataset'):
     
-                fig.add_trace(Scatter3d(x=i_pca_coords[:,0], y=i_pca_coords[:,1], z=i_pca_coords[:,2], 
+                fig.add_trace(Scatter3d(x=i_pca_coords[:,pcs[0]-1], y=i_pca_coords[:,pcs[1]-1], z=i_pca_coords[:,pcs[2]-1], 
                     mode='markers', text=i_annotation.display_metadata.values, 
-                    opacity=0.9, name=i_label, visible=False, 
+                    opacity=opac, name=i_label, visible=False, 
                     marker=dict(size=5, color=i_annotation[i_label].values,
                     colorscale = 'viridis')))
             else:
@@ -482,9 +490,9 @@ def plot_pca(pca_coords, annotations, pca, labels, colour_dict):
                     sel = i_annotation[i_label].values.astype(str) == i_type 
                     i_colour = colour_dict[i_type]
 
-                    fig.add_trace(Scatter3d(x=i_pca_coords[sel,0], y=i_pca_coords[sel,1], z=i_pca_coords[sel,2], 
+                    fig.add_trace(Scatter3d(x=i_pca_coords[sel,pcs[0]-1], y=i_pca_coords[sel,pcs[1]-1], z=i_pca_coords[sel,pcs[2]-1], 
                         mode='markers', text=i_annotation.display_metadata.values[sel], 
-                        opacity=0.9, name=i_type, visible=False, 
+                        opacity=opac, name=i_type, visible=False, 
                         marker=dict(size=5, color=i_colour)))
         
         button_list.append(dict(label=i_label,
@@ -494,11 +502,13 @@ def plot_pca(pca_coords, annotations, pca, labels, colour_dict):
       
         fig.update_layout(
             updatemenus=[dict(active=0,buttons=button_list,)],
-            scene = dict(xaxis_title='PC1 %%%.2f' %(pca.explained_variance_ratio_[0]*100),
-                         yaxis_title='PC2 %%%.2f' %(pca.explained_variance_ratio_[1]*100),
-                         zaxis_title='PC3 %%%.2f' %(pca.explained_variance_ratio_[2]*100))
+            scene = dict(xaxis_title='PC%d %%%.2f' %(pcs[0], pca.explained_variance_ratio_[pcs[0]-1]*100),
+                         yaxis_title='PC%d %%%.2f' %(pcs[1], pca.explained_variance_ratio_[pcs[1]-1]*100),
+                         zaxis_title='PC%d %%%.2f' %(pcs[2], pca.explained_variance_ratio_[pcs[2]-1]*100))
             )
 
+    if out_file is not None:
+        plot(fig, auto_open=False, filename=out_file) 
     iplot(fig)
 
 

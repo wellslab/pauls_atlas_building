@@ -139,7 +139,10 @@ for i_dataset in annotations.Dataset.unique():
         f_culture_cond.write('$%s :=\n' %j_condition)
         f_culture_cond.write('{\n')
         for i_gene in condition_dataframe.index.values:
-            f_culture_cond.write(' %s = %d\n' %(i_gene, condition_dataframe.loc[i_gene,'_'.join([str(i_dataset),str(j_condition),str('naive')])]))
+            if i_gene!=condition_dataframe.index.values[-1]:
+                f_culture_cond.write(' %s = %d and\n' %(i_gene, condition_dataframe.loc[i_gene,'_'.join([str(i_dataset),str(j_condition),str('naive')])]))
+            else:
+                f_culture_cond.write(' %s = %d\n' %(i_gene, condition_dataframe.loc[i_gene,'_'.join([str(i_dataset),str(j_condition),str('naive')])]))
         f_culture_cond.write('};\n')
         f_culture_cond.write('\n')
 
@@ -152,7 +155,10 @@ for initial_condition in annotations['Initial Condition'].dropna().unique():
         f_culture_cond.write('{\n')
         for i_gene in condition_dataframe.index.values:
             annotations_row = annotations.loc[annotations['Experiment']==initial_condition]
-            f_culture_cond.write(' %s = %d\n' %(i_gene, condition_dataframe.loc[i_gene,'_'.join([str(i_dataset),str(annotations_row.Experiment.unique()[0]),str(annotations_row.LM_Group_COLOR.unique()[0])])]))
+            if i_gene!=condition_dataframe.index.values[-1]:
+                f_culture_cond.write(' %s = %d and\n' %(i_gene, condition_dataframe.loc[i_gene,'_'.join([str(i_dataset),str(annotations_row.Experiment.unique()[0]),str(annotations_row.LM_Group_COLOR.unique()[0])])]))
+            else:
+                f_culture_cond.write(' %s = %d\n' %(i_gene, condition_dataframe.loc[i_gene,'_'.join([str(i_dataset),str(annotations_row.Experiment.unique()[0]),str(annotations_row.LM_Group_COLOR.unique()[0])])]))
         f_culture_cond.write('};\n')
         f_culture_cond.write('\n')
 
@@ -166,17 +172,18 @@ for tempfile in ['/Users/pwangel/Downloads/temp/temp_experiments.txt', '/Users/p
     f.write(open(tempfile).read())
 f.close()
 
-f_model = open('/Users/pwangel/Downloads/temp/model.txt', 'a')
+f_model = open('/Users/pwangel/Downloads/temp/model.net', 'a')
 
 f_model.write('directive updates sync;\n')
 f_model.write('directive length 20;\n')
 f_model.write('directive uniqueness interactions;\n')
 f_model.write('directive limit 0;\n')
 f_model.write('directive regulation legacy;\n')
-'[](0..15); '.join([str(i_gene) for i_gene in gene_list])+';\n'
+f_model.write('[](0..15); '.join([str(i_gene) for i_gene in gene_list])+'[](0..15)'+';\n')
 for i_gene in gene_list:
     for j_gene in gene_list:
         direction = np.random.choice(['positive', 'negative', 'positive optional', 'negative optional'])
-        f_model.write('%s\t%s\t%s;\n' %(i_gene, j_gene, direction))
+        if np.random.rand()>0.9:
+            f_model.write('%s\t%s\t%s;\n' %(i_gene, j_gene, direction))
 
 f_model.close()
