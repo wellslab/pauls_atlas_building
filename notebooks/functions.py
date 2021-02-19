@@ -468,7 +468,6 @@ def plot_pca(pca_coords, annotations, pca, labels, colour_dict, pcs=[1,2,3], out
         visibility_list = (visibility_df.label.values==i_label).tolist()
 
         for i in range(len(annotations)):
-        #for i_annotation, i_pca_coords in zip(annotations, pca_coords):
             i_annotation = annotations[i]
             i_pca_coords = pca_coords[i]
 
