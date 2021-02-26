@@ -71,8 +71,10 @@ df1 = convert_symbols_to_ensembl(df1)
 df2 = pd.read_csv('/Users/pwangel/Data/External_Data/GSE123055/GSE123055_counts.txt', sep='\t', index_col=0)
 df2.drop(labels=['Unnamed: 52'], axis=1, inplace=True)
 
-df3 = pd.read_csv('/Users/pwangel/Data/External_Data/GSE131551/GSE131551_human_bulk.raw_count_matrix.tsv', sep='\t', index_col=0)
-df3.drop(labels='geneID', axis=1, inplace=True)
+#df3 = pd.read_csv('/Users/pwangel/Data/External_Data/GSE131551/GSE131551_human_bulk.raw_count_matrix.tsv', sep='\t', index_col=0)
+#df3.drop(labels='geneID', axis=1, inplace=True)
+
+df3 = pd.read_csv('/Users/pwangel/Data/External_Data/GSE137295/GSE137295_All_Raw_CountData.csv', index_col=0)
 
 
 # In[5]:
@@ -80,7 +82,7 @@ df3.drop(labels='geneID', axis=1, inplace=True)
 
 ext_annotations = pd.DataFrame(index=df1.columns.to_list()+df2.columns.to_list()+df3.columns.to_list())
 ext_annotations['Platform_Category']='RNASeq'
-ext_annotations['Dataset'] = ['GSE114873' for i in range(df1.shape[1])] +  ['GSE123055' for i in range(df2.shape[1])] + ['GSE131551' for i in range(df3.shape[1])]
+ext_annotations['Dataset'] = ['GSE114873' for i in range(df1.shape[1])] +  ['GSE123055' for i in range(df2.shape[1])] + ['GSE137295' for i in range(df3.shape[1])]
 ext_annotations['generic_sample_type'] = 'Unannotated'
 ext_annotations['display_metadata']  = [str(i_dataset)+'<br>'+str(i_sample) for i_dataset, i_sample in zip(ext_annotations.Dataset.values, ext_annotations.index.values)]
 
@@ -104,16 +106,16 @@ data = data[annotations.index]
 data = functions.transform_to_percentile(data)
 
 
-# In[8]:
-
-
-#genes = functions.calculate_platform_dependence(data, annotations)
-#genes.to_csv('/Users/pwangel/Downloads/pluripotent_atlas_genes_with_ext.tsv', sep='\t')
-#genes = pd.read_csv('/Users/pwangel/Downloads/pluripotent_atlas_genes.tsv', sep='\t')
-genes = pd.read_csv('/Users/pwangel/Downloads/pluripotent_atlas_genes_with_ext.tsv', sep='\t') 
-
-
 # In[9]:
+
+
+genes = functions.calculate_platform_dependence(data, annotations)
+genes.to_csv('/Users/pwangel/Downloads/pluripotent_atlas_genes_with_ext.tsv', sep='\t')
+#genes = pd.read_csv('/Users/pwangel/Downloads/pluripotent_atlas_genes.tsv', sep='\t')
+#genes = pd.read_csv('/Users/pwangel/Downloads/pluripotent_atlas_genes_with_ext.tsv', sep='\t') 
+
+
+# In[10]:
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
@@ -121,13 +123,13 @@ pca.fit(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.va
 pca_coords = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25]).transpose())
 
 
-# In[10]:
+# In[11]:
 
 
 pca_coords_ext = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25][ext_annotations.index]).transpose())
 
 
-# In[11]:
+# In[13]:
 
 
 functions.plot_pca([pca_coords, pca_coords_ext], [annotations, ext_annotations],pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset'], colour_dict={}, pcs=[1,2,3], out_file='/Users/pwangel/Downloads/pluripotent_atlas_with_external.html')
@@ -135,7 +137,7 @@ functions.plot_pca([pca_coords, pca_coords_ext], [annotations, ext_annotations],
 
 # Now try to 'zoom in' on the pluripotent cells (isolate them by applying k means clustering)
 
-# In[12]:
+# In[14]:
 
 
 kmeans = sklearn.cluster.KMeans(n_clusters=4).fit(pca_coords)
@@ -143,23 +145,30 @@ annotations['K Means'] = kmeans.labels_
 ext_annotations['K Means'] = annotations['K Means'].loc[ext_annotations.index]
 
 
-# In[13]:
+# In[15]:
 
 
 functions.plot_pca(pca_coords, annotations,pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset', 'K Means'], colour_dict={}, pcs=[1,2,3], out_file='/Users/pwangel/Downloads/pluripotent_kmeans_atlas_with_external.html')
 
 
-# In[14]:
+# In[19]:
 
 
-pluripotent_annotations = annotations.loc[annotations['K Means']==0]
+pluripotent_annotations = annotations.loc[(annotations['K Means']==0) | np.in1d(annotations.Dataset.values, [7253, 7240, 7124, 7135, 'GSE137295', 'GSE123055', 'GSE114873'])]
 pluripotent_data = data[pluripotent_annotations.index]
-#pluripotent_genes = functions.calculate_platform_dependence(pluripotent_data, pluripotent_annotations)
-#pluripotent_genes.to_csv('/Users/pwangel/Downloads/pluripotent_only_atlas_genes_with_ext.tsv', sep='\t')
-pluripotent_genes = pd.read_csv('/Users/pwangel/Downloads/pluripotent_only_atlas_genes_with_ext.tsv', sep='\t')
+pluripotent_genes = functions.calculate_platform_dependence(pluripotent_data, pluripotent_annotations)
+pluripotent_genes.to_csv('/Users/pwangel/Downloads/pluripotent_only_atlas_genes_with_ext.tsv', sep='\t')
+#pluripotent_genes = pd.read_csv('/Users/pwangel/Downloads/pluripotent_only_atlas_genes_with_ext.tsv', sep='\t')
 
 
-# In[15]:
+# In[20]:
+
+
+pluripotent_annotations.to_csv('/Users/pwangel/Downloads/pluripotent_RNASeq_annotations.tsv', sep='\t')
+pluripotent_annotations.loc[pluripotent_annotations.Platform_Category=='RNASeq'].shape
+
+
+# In[21]:
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
@@ -167,7 +176,7 @@ pca.fit(functions.transform_to_percentile(pluripotent_data.loc[pluripotent_genes
 pca_coords = pca.transform(functions.transform_to_percentile(pluripotent_data.loc[pluripotent_genes.Platform_VarFraction.values<=0.2]).transpose())
 
 
-# In[16]:
+# In[22]:
 
 
 functions.plot_pca(pca_coords, pluripotent_annotations,pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset'], colour_dict={}, pcs=[1,2,3], out_file='/Users/pwangel/Downloads/pluripotent_only_atlas_with_external.html')

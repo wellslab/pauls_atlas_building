@@ -508,10 +508,11 @@ def plot_pca(pca_coords, annotations, pca, labels, colour_dict, pcs=[1,2,3], out
 
     if out_file is not None:
         plot(fig, auto_open=False, filename=out_file) 
-    iplot(fig)
+    else:
+        iplot(fig)
 
 
-def plot_dot_plots(dataframe, annotations, cell_property, cell_colour_by, gene_list, output_dir):
+def plot_dot_plots(dataframe, annotations, cell_property, cell_colour_by, gene_list, output_dir, plot_hist=False):
 
     import seaborn as sns
     import matplotlib.pyplot as pyplot
@@ -525,12 +526,18 @@ def plot_dot_plots(dataframe, annotations, cell_property, cell_colour_by, gene_l
         df_violin['Cell Property'] = annotations[cell_property].values.flatten()
         df_violin['Cell Colour'] = annotations[cell_colour_by].values.flatten()
 
-        fig, ax = pyplot.subplots(1,1, figsize=(13.5,7.0))
-        ax = sns.swarmplot(x="Cell Property", y="Expression", size=9, hue='Cell Colour', data=df_violin)
+        if plot_hist==True:
+            fig, (ax0, ax1) = pyplot.subplots(2,1, figsize=(13.5,12.0))
+            ax1.set_xlim(df_violin['Expression'].min(), df_violin['Expression'].max())
+        else:
+            fig, ax0 = pyplot.subplots(1,1, figsize=(13.5,6.0))
+
+        sns.swarmplot(x="Expression", y="Cell Property", size=9, hue='Cell Colour', data=df_violin, ax=ax0, palette="Set2")
+        if plot_hist==True:
+            sns.histplot(data=df_violin, x="Expression", ax=ax1)
     
-        pyplot.ylabel(i_gene+' Expression')
-        pyplot.ylim(df_violin['Expression'].min(), df_violin['Expression'].max())
+        ax0.set_title(i_gene+' Expression')
+        ax0.set_xlim(df_violin['Expression'].min(), df_violin['Expression'].max())
         #pyplot.show()
         pyplot.savefig(output_dir+'/%s_dotplot.pdf' %i_gene)
-        ax.remove()
         pyplot.close()
