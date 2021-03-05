@@ -69,6 +69,7 @@ dataset_list = [ #Get rid of this when the data is better curated...
                 ]
 
 genes_df = pd.read_csv('/Users/pwangel/PlotlyWorkspace/combine_data/naive_stemcells/REIN_genes.tsv', sep='\t', index_col=0)
+genes_network = pd.read_csv('/Users/pwangel/Downloads/REIN_network.txt', sep='\t', skiprows=5, header=0, names=['Gene A','Gene B', 'Relation'])
 
 #data = pd.DataFrame(index=main_ensembl_ids)
 data = pd.DataFrame()
@@ -88,20 +89,23 @@ df2.drop(labels=['Unnamed: 52'], axis=1, inplace=True)
 
 df3 = pd.read_csv('/Users/pwangel/Data/External_Data/GSE137295/GSE137295_All_Raw_CountData.csv', index_col=0)
 
-data = data.merge(df1, how='inner', left_index=True, right_index=True)
-data = data.merge(df2, how='inner', left_index=True, right_index=True)
-data = data.merge(df3, how='inner', left_index=True, right_index=True)
+#### THS IS TEMPORARY UNTIL NEW DATASETS ARE PROCESSED!!!!
+data = data.merge(df1, how='left', left_index=True, right_index=True)
+data = data.merge(df2, how='left', left_index=True, right_index=True)
+data = data.merge(df3, how='left', left_index=True, right_index=True)
+data.fillna(0.0, inplace=True)
 
 #data        = pd.read_csv('/Users/pwangel/Downloads/pluripotent_atlas_data.tsv', sep='\t', index_col=0)
 annotations = pd.read_csv('/Users/pwangel/Downloads/pluripotent_RNASeq_annotations.tsv', sep='\t', index_col=0)
 lizzi_anno  = pd.read_csv('/Users/pwangel/PlotlyWorkspace/combine_data/naive_stemcells/stemcell_annotations.tsv', sep='\t', index_col=0)
 annotations = annotations.merge(lizzi_anno['LM_Group_COLOR'], how='left', left_index=True, right_index=True)
 experiment_anno = pd.read_csv('/Users/pwangel/Downloads/RNASeq_only_pluripotent_annotations.tsv', sep='\t', index_col=0)
-experiment_anno.index = [i+':'+j for i,j in zip(experiment_anno.chip_id.values.astype(str), experiment_anno.Dataset.values.astype(int).astype(str))]
+experiment_anno.index = [i+';'+j for i,j in zip(experiment_anno.chip_id.values.astype(str), experiment_anno.Dataset.values.astype(int).astype(str))]
 annotations = annotations.merge(experiment_anno[['Experiment', 'Time', 'Initial Condition']], how='left', left_index=True, right_index=True)
+#annotations.Dataset = annotations.Dataset.astype(float).astype(int).astype(str)
 
 genes       = pd.read_csv('/Users/pwangel/Data/ensembl_hg38.91/gene_to_symbol_ensembl91_human.tsv', sep='\t', index_col=0, names=['symbol'])
-gene_list   = np.intersect1d(genes.loc[data.index].symbol.values, genes_df.index.values)
+gene_list   = np.intersect1d(genes.loc[np.intersect1d(data.index, genes.index)].symbol.values, genes_df.index.values)
 annotations['chip_id'] = [i.split(';')[0] for i in annotations.index.values.astype(str)]
 annotations = annotations.loc[(annotations.Platform_Category=='RNASeq') & (annotations.Dataset!='7275.0')] #This dataset is mistakenly in, it is annotated endoderm
 data        = data[annotations.chip_id]
@@ -173,9 +177,13 @@ for i_dataset in annotations.Dataset.unique():
                 else:
                     condition_dataframe.loc[i_gene, i_name] = np.nan
 
-#Open two files to place experimental conditions into, we will append one to the other afterwards
-f_experiments  = open('/Users/pwangel/Downloads/temp/temp_experiments.txt', 'a') 
+genes_network = genes_network.loc[np.in1d(genes_network['Gene A'].values, genes_df.loc[genes_df.Inclusion.values].index) & \
+                                  np.in1d(genes_network['Gene B'].values, genes_df.loc[genes_df.Inclusion.values].index)]
+genes_network.to_csv('/Users/pwangel/Downloads/temp/temp.REIN', sep='\t', index=False)
+
+f_experiments  = open('/Users/pwangel/Downloads/temp/temp.REIN', 'a') 
 f_culture_cond = open('/Users/pwangel/Downloads/temp/temp_conditions.txt', 'a')
+f_experiments.write('\n')
 
 #Print out results into text files for loading into REIN
 experiment_counter=0
@@ -185,11 +193,12 @@ for i_dataset in annotations.Dataset.unique():
                                               annotations.loc[sel_conditions].groupby(['Experiment', 'Initial Condition'], dropna=False).size().reset_index()['Initial Condition'].values):
 
         print(j_condition)
+        print(annotations.loc[sel_conditions].groupby(['Experiment', 'Initial Condition'], dropna=False).size().reset_index())
         # These are the name as appearing in the condition matrix
         condition_name = '_'.join([str(i_dataset),str(j_condition),str('naive')])
 
         f_experiments.write('#Experiment%d[20] |= $Experiment%d_%s "";\n' %(experiment_counter,experiment_counter, j_condition))
-        if not pd.isnull(initial_condition):
+        if initial_condition!='None':
             annotations_row = annotations.loc[(annotations.Dataset==i_dataset)&(annotations['Experiment']==initial_condition)]
             initial_condition_name = '_'.join([str(i_dataset),str(initial_condition),str(annotations_row.LM_Group_COLOR.unique()[0])])
             f_experiments.write('#Experiment%d[0] |= $Experiment%d_%s "";\n' %(experiment_counter,experiment_counter, initial_condition))
@@ -205,7 +214,7 @@ for i_dataset in annotations.Dataset.unique():
         f_culture_cond.write('};\n')
         f_culture_cond.write('\n')
 
-        if not pd.isnull(initial_condition):
+        if initial_condition!='None':
             f_culture_cond.write('$Experiment%d_%s :=\n' %(experiment_counter, initial_condition))
             f_culture_cond.write('{\n')
             for i_gene in condition_dataframe.loc[~condition_dataframe.loc[:,initial_condition_name].isnull()].index.values:
@@ -223,23 +232,9 @@ f_experiments.write('\n')
 f_experiments.close()
 f_culture_cond.close()
 
-f = open("/Users/pwangel/Downloads/temp/observations.txt", "w")
-for tempfile in ['/Users/pwangel/Downloads/temp/temp_experiments.txt', '/Users/pwangel/Downloads/temp/temp_conditions.txt']:
+
+f = open("/Users/pwangel/Downloads/temp/temp.REIN", "a")
+for tempfile in ['/Users/pwangel/Downloads/temp/temp_conditions.txt']:
     f.write(open(tempfile).read())
 f.close()
 
-f_model = open('/Users/pwangel/Downloads/temp/model.net', 'a')
-
-f_model.write('directive updates sync;\n')
-f_model.write('directive length 20;\n')
-f_model.write('directive uniqueness interactions;\n')
-f_model.write('directive limit 0;\n')
-f_model.write('directive regulation legacy;\n')
-f_model.write('[](0..15); '.join([str(i_gene) for i_gene in gene_list])+'[](0..15)'+';\n')
-for i_gene in gene_list:
-    for j_gene in gene_list:
-        direction = np.random.choice(['positive', 'negative', 'positive optional', 'negative optional'])
-        if np.random.rand()>0.9:
-            f_model.write('%s\t%s\t%s;\n' %(i_gene, j_gene, direction))
-
-f_model.close()
