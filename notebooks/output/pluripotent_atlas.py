@@ -106,16 +106,16 @@ data = data[annotations.index]
 data = functions.transform_to_percentile(data)
 
 
-# In[9]:
+# In[13]:
 
 
-genes = functions.calculate_platform_dependence(data, annotations)
-genes.to_csv('/Users/pwangel/Downloads/pluripotent_atlas_genes_with_ext.tsv', sep='\t')
+#genes = functions.calculate_platform_dependence(data, annotations)
+#genes.to_csv('/Users/pwangel/Downloads/pluripotent_atlas_genes_with_ext.tsv', sep='\t')
 #genes = pd.read_csv('/Users/pwangel/Downloads/pluripotent_atlas_genes.tsv', sep='\t')
-#genes = pd.read_csv('/Users/pwangel/Downloads/pluripotent_atlas_genes_with_ext.tsv', sep='\t') 
+genes = pd.read_csv('/Users/pwangel/Downloads/pluripotent_atlas_genes_with_ext.tsv', sep='\t') 
 
 
-# In[10]:
+# In[ ]:
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
