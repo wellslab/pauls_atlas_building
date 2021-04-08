@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# This notebook is an overview and walkthough of the nascent pluripotency atlas. The text and figures will also be placed in a document for easier viewing. 
+# This notebook is an overview and walkthough of the nascent pluripotency atlas. 
 # 
 # The prerequisites for creating the atlas are a) gene expression data for each sample, and b) metadata for each sample containing at a minimum the experimental platform the sample was measured on. These two files are usually called 'data' and 'annotations' respectively. 
 # 
 # This notebook also reads in some externally processed data, which we hope to process ourselves and include in the near future. These external datasets are recognisable by the GSE in their filename.
 
-# In[1]:
+# In[2]:
 
 
 import numpy as np
@@ -17,7 +17,7 @@ import functions
 from general_processing.process_functions import convert_symbols_to_ensembl 
 
 
-# Reading in expression data and metadata (annotations.tsv). For plotting a 'display_metadata' field is required in the annotations dataframe, so I have used a temporary column here, the 'generic_sample_type'.
+# Reading in expression data and metadata (annotations.tsv). For plotting, a 'display_metadata' field is required in the annotations dataframe, so I have used a temporary column here, the 'generic_sample_type'. To see the format of these dataframes just have a look at the example .tsv files I have here.
 
 # In[2]:
 
@@ -44,7 +44,7 @@ df1 = convert_symbols_to_ensembl(df1)
 df2 = pd.read_csv('/Users/pwangel/Data/External_Data/GSE123055/GSE123055_counts.txt', sep='\t', index_col=0)
 df2.drop(labels=['Unnamed: 52'], axis=1, inplace=True)
 
-#This dataset is weird
+#This dataset is weird, not using it
 #df3 = pd.read_csv('/Users/pwangel/Data/External_Data/GSE131551/GSE131551_human_bulk.raw_count_matrix.tsv', sep='\t', index_col=0)
 #df3.drop(labels='geneID', axis=1, inplace=True)
 
@@ -69,9 +69,10 @@ ext_annotations['display_metadata']  = [str(i_dataset)+'<br>'+str(i_sample) for 
 # 
 # Also include the externally processed data in this step.
 
-# In[5]:
+# In[ ]:
 
 
+#This tsv has the datasets of biological interest
 datasets_to_keep = pd.read_csv('../data/Pluripotency datasets in stemformatics - existing stemformatics data.tsv', sep='\t')['Dataset'].values
 annotations = annotations.loc[np.in1d(annotations.Dataset, datasets_to_keep)]
 
@@ -83,7 +84,7 @@ data = data.merge(df4, how='inner', left_index=True, right_index=True)
 data = data[annotations.index]
 
 
-# Before we make the atlas, we will do some analysis on the data, in particular I would like to see the distribution of experimental platform. It would also be nice to see the cell type distributions, but without the proper metadata it is difficult
+# Before we make the atlas, we will do some simple analysis on the data. In particular I would like to see the distribution of experimental platform. It would also be nice to see the cell type distributions, but without the proper metadata it is difficult
 
 # In[6]:
 
@@ -99,7 +100,7 @@ with pd.option_context('display.max_rows', None, 'display.max_columns', None):
     print(annotations.groupby(['Platform_Category']).size())
 
 
-# First step in the atlas two step process: transform expression values to percentile values.
+# Now to actually make the atlas. First step in the atlas two step process: transform expression values to percentile values.
 
 # In[8]:
 
@@ -128,17 +129,18 @@ pca.fit(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.va
 pca_coords = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25]).transpose())
 
 
-# Generate a separate set of coordinates for the external data as I would like to project them by themselves. The way this works in that a list of data/annotations dataframes is passed to the plot function. The first set of data/annotations is the transparent base and subsequents sets are projected on. The plot the pca is saved as a .html in the <out_file> location.
+# I generate a separate set of coordinates for the external data as I would like to project them by themselves. The way this works in that a list of data/annotations dataframes is passed to the plot function. The first set of data/annotations is the base and subsequent sets are projected on. The plot the pca is saved as a .html in the <out_file> location.
 
-# In[11]:
+# In[ ]:
 
 
 pca_coords_ext = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25][ext_annotations.index]).transpose())
 
+#First dataframes in the list of the base coordinates, following dataframes are projected on
 functions.plot_pca([pca_coords, pca_coords_ext], [annotations, ext_annotations],pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset'], colour_dict={}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_atlas_with_external.html')
 
 
-# Now try to 'zoom in' on the pluripotent cells (isolate them by applying k means clustering). This is a fairly rough way to identify the samples that are relevant to the 'naive' vs 'primed' analysis. I.e. I want stem cells only, no differentiated samples.
+# Now try to 'zoom in' on the pluripotent cells (isolate them by applying k means clustering). This is a fairly rough way to identify the samples that are relevant to the 'naive' vs 'primed' analysis. I want stem cells only, no differentiated samples, this is best cleared up by the biological annotations but k means will do for now.
 
 # In[12]:
 
@@ -148,7 +150,7 @@ annotations['K Means'] = kmeans.labels_
 ext_annotations['K Means'] = annotations['K Means'].loc[ext_annotations.index]
 
 
-# Plot the PCA again but now with the kmeans clusters, so we can identify each cluster
+# Plot the PCA again but now with the kmeans clusters, so we can identify the biology of each cluster.
 
 # In[13]:
 
