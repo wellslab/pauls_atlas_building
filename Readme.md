@@ -1,18 +1,25 @@
 ## Folder structure
 
-You can change the subfolders in this project in any way you want, but for beginners, the current structure is recommended to deal with most situations in various projects. This template comes with example folders and files to get you started.
+This repo contains the basic scripts Paul uses to run atlases. It does not contain scripts to pull data or annotations from stemformatics.
 
-* howtos/
+	-data/ 
+		contains example data files for the pluriptency atlas
 
-    Contains notes you can keep as you discover tricks and work out how to do tasks (markdown format makes it easier to read on the website directly).
+	-notebooks_and_scripts/ 
+		contains Python scripts and .ipynb notebooks that are used to generate an atlas.
 
-* notebooks/
+Many of the core functions are found in the functions.py file. There are multiple .ipynb notebooks using these functions.
 
-    Jupyter notebooks are placed here. If there are many notebooks in a big project, it's useful to create subfolders here too (eg. 0_Initial_analysis/, 1_Clustering/). For tips on how to version control jupyter notebooks, see howtos/ManagingNotebooks.md.
+Notable functions are:
 
-    Output files from notebooks can be placed in subfolders within notebooks/. This actually makes it easy to identify which output files were produced by which notebooks. These output files can then be shared with collaborators.
+	-transform_to_percentile()
+		Transforms an expression matrix into percentile values.
 
-* received/
+	-calculate_platform_dependence()
+		Runs univariate variance modelling on each gene in an expression matrix to calculate the fraction of it's variance that depends upon platform.
 
-    Contains data files which often act as inputs to programs you write. These may be downloaded from websites or received by email. Subfolders here can be used to distinguish the different sources. For example, we may want to have a subfolder called "GEO" here for files downloaded from GEO website, and another called "Paul" for files received from Paul. It's good practise to record where each file came from, as this can easily be forgotten later and it can put much work downstream in doubt when you're not sure where the input files originate.
- 
+	-plot_pca()
+		Plots the atlas using pca coordinates and sample annotations.
+
+Additionlly, there are some functions in the general_processing directory which may be useful, such as convert gene symbols to ensembl names.
+
