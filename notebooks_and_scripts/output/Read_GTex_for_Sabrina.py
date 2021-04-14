@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[30]:
+# In[1]:
 
 
 import pandas as pd
@@ -14,7 +14,7 @@ meta = pd.read_csv('/Users/pwangel/Downloads/GTEx_Analysis_v8_Annotations_Sample
 
 # Sabrinas list of cell types (tissues) she wants
 
-# In[27]:
+# In[2]:
 
 
 categories = [[
@@ -54,13 +54,19 @@ categories = [[
 names = ['CNS', 'Cardiovascular', 'ENS', 'Endocrine']
 
 
-# In[70]:
+# In[10]:
 
 
 for i_cat, i_name in zip(categories, names):
-    samples = meta.loc[np.in1d(meta['SMTSD'].values, i_cat)&(meta['SMAFRZE']=='RNASEQ')].index.astype(str).tolist()
-    data = pd.read_csv('/Users/pwangel/Downloads/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='\t', usecols=samples, skiprows=2)
+    samples = ['Name','Description']+meta.loc[np.in1d(meta['SMTSD'].values, i_cat)&(meta['SMAFRZE']=='RNASEQ')].index.astype(str).tolist()
+    data = pd.read_csv('/Users/pwangel/Downloads/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='\t', usecols=samples, skiprows=2, index_col=0)
     data.to_csv('/Users/pwangel/Downloads/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm_%s.gct' %i_name, sep='\t')
+
+
+# In[11]:
+
+
+data
 
 
 # In[ ]:
