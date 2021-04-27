@@ -64,14 +64,17 @@ def calculate_platform_dependence(data, annotations):
     warnings.simplefilter('ignore', ConvergenceWarning)
 
     output_df = pd.DataFrame(index=data.index, columns=['Platform_VarFraction'])
-    temp_data = data[annotations.index].copy().transpose()
-    temp_data['Platform_Category'] = annotations['Platform_Category']
+    data = data[annotations.index].transpose()
+    data['Platform_Category'] = annotations['Platform_Category']
 
-    for i_gene in temp_data.columns.values[:-1]:
+    for i_gene in data.columns.values[:-1]:
 
-        md  = smf.mixedlm("%s ~ Platform_Category" %str(i_gene), data=temp_data, groups = temp_data['Platform_Category'])
+        md  = smf.mixedlm("%s ~ Platform_Category" %str(i_gene), data=data, groups = data['Platform_Category'])
         mdf = md.fit()
         output_df.loc[i_gene, 'Platform_VarFraction'] = mdf.fittedvalues.std()**2/(mdf.fittedvalues.std()**2+mdf.resid.std()**2)
+
+    data.drop(labels = 'Platform_Category', axis=1, inplace=True)
+    data = data.transpose()
 
     return output_df
 
@@ -207,15 +210,15 @@ def resample_clustering(data, annotations, resample_strategy, n_resamples=200, n
  
             print("Omitting dataset %d" %annotations['Dataset'].unique()[i_iter])
             i_annotations = annotations.copy().loc[annotations['Dataset'] != annotations['Dataset'].unique()[i_iter]]
-            i_data        = data[i_annotations.index.values].copy()
+            i_data        = transform_to_percentile(data[i_annotations.index.values].copy())
          
         if resample_strategy=='bootstrap':
  
             print("Bootstrap resampling number %d" %i_iter)
             i_annotations = annotations.copy().sample(frac=1.0, replace=True)
-            i_data        = data[i_annotations.index.values].copy()
+            i_data        = transform_to_percentile(data[i_annotations.index.values].copy())
 
-        i_varPart  = calculate_platform_dependence(transform_to_percentile(i_data), i_annotations) 
+        i_varPart  = calculate_platform_dependence(i_data, i_annotations) 
         i_cut_data = transform_to_percentile(i_data.loc[i_varPart.loc[i_varPart['VarFraction']<=0.2].index.values])  
         i_output   = pca.fit_transform(i_cut_data.transpose())
     
