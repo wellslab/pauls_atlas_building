@@ -64,7 +64,8 @@ def calculate_platform_dependence(data, annotations):
     warnings.simplefilter('ignore', ConvergenceWarning)
 
     output_df = pd.DataFrame(index=data.index, columns=['Platform_VarFraction'])
-    temp_data = data.copy().transpose().merge(annotations['Platform_Category'], how='left', left_index=True, right_index=True)
+    temp_data = data[annotations.index].copy().transpose()
+    temp_data['Platform_Category'] = annotations['Platform_Category']
 
     for i_gene in temp_data.columns.values[:-1]:
 
