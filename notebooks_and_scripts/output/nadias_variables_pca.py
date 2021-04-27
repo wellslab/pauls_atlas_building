@@ -14,6 +14,7 @@ import functions
 import scipy
 from IPython.core.display import display, HTML
 display(HTML("<style>.container { width:100% !important; }</style>"))
+from general_processing.processing_functions import convert_symbols_to_ensembl, transform_to_percentile 
 
 
 # In[116]:
@@ -72,7 +73,7 @@ annotations.replace(to_replace='Unannotated__Unannotated', value='Unannotated', 
 # In[120]:
 
 
-data = functions.transform_to_percentile(data)
+data = transform_to_percentile(data)
 
 
 # Only need to compute gene variance fraction if not done already
@@ -88,8 +89,8 @@ data = functions.transform_to_percentile(data)
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
-pca.fit(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.2]).transpose())
-pca_coords = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.2]).transpose())
+pca.fit(transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.2]).transpose())
+pca_coords = pca.transform(transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.2]).transpose())
 
 
 # In[123]:

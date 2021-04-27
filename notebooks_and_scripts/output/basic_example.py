@@ -11,7 +11,7 @@ import pandas as pd
 import sklearn
 import gc
 import functions
-import scipy
+from general_processing.processing_functions import transform_to_percentile 
 
 
 # In[2]:
@@ -34,7 +34,7 @@ genes          = pd.read_csv('/Users/pwangel/Downloads/myeloid_atlas_genes.tsv',
 # In[29]:
 
 
-data = functions.transform_to_percentile(data)
+data = transform_to_percentile(data)
 
 
 # Only need to compute gene variance fraction if not done already, in the above we have already read a previously calculated version into the gene dataframe
@@ -50,8 +50,8 @@ data = functions.transform_to_percentile(data)
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
-pca.fit(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.2]).transpose())
-pca_coords = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.2]).transpose())
+pca.fit(transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.2]).transpose())
+pca_coords = pca.transform(transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.2]).transpose())
 
 
 # Plot the pca

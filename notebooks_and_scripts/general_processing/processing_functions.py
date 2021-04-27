@@ -138,7 +138,7 @@ def transform_to_percentile(dataframe):
 def retrieve_expression_data(dataframe):
 
     '''
-    Makes calls to stemformatics api to retrieve expression data based upon datasets in the dataframe
+    Makes http get requests to stemformatics api to retrieve expression data based upon datasets in the dataframe
 
     Parameters:
     ----------

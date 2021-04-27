@@ -7,14 +7,14 @@
 # 
 # This notebook also reads in some externally processed data, which we hope to process ourselves and include in the near future. These external datasets are recognisable by the GSE in their filename.
 
-# In[2]:
+# In[1]:
 
 
 import numpy as np
 import pandas as pd
 import sklearn
 import functions
-from general_processing.process_functions import convert_symbols_to_ensembl 
+from general_processing.processing_functions import *
 
 
 # Reading in expression data and metadata (annotations.tsv). For plotting, a 'display_metadata' field is required in the annotations dataframe, so I have used a temporary column here, the 'generic_sample_type'. To see the format of these dataframes just have a look at the example .tsv files I have here.
@@ -27,6 +27,24 @@ annotations = pd.read_csv('../data/pluripotent_annotations.tsv', sep='\t', index
 
 annotations['display_metadata'] = annotations.generic_sample_type
 #annotations = annotations.loc[annotations.Platform_Category!='Illumina V2']
+
+
+# In the future I would like this to be able to grab expression data from the stemformatics api. IdeaZlly, we would just read in the annotations data here and use it to get expression data. At the moment the annotations are not complete 
+# and the sample ids do not match. We will also need the probe mappings for the microarrays!
+
+# In[1]:
+
+
+data = pd.DataFrame()
+
+for i_dataset, platform_type in zip(annotations.Dataset.unique()):
+    i_df = retrieve_expression_data(i_dataset)
+    probe_map = pd.read_csv()
+    i_df = remove_microarray_duplicates()
+    
+    data = data.merge(i_df, how='inner', left_index=True, right_index=True)
+    
+     
 
 
 # This is a temporary hack to include some externally processed data and see how the atlas would look. They look good so I recommend they be processed with the stemformatics pipeline and included. I have not placed the external data into my git repo, it would be simpler just to process with s4m pipeline.
@@ -105,7 +123,7 @@ with pd.option_context('display.max_rows', None, 'display.max_columns', None):
 # In[8]:
 
 
-data = functions.transform_to_percentile(data)
+data = transform_to_percentile(data)
 
 
 # Second step: model the influence of platform upon expression for each gene. As this can take a while, I often save the results and just read them in rather than recompute them. In this case the results are saved in 'pluripotent_atlas_genes_with_ext.tsv'.
@@ -125,8 +143,8 @@ genes.to_csv('../data/pluripotent_atlas_genes_with_ext.tsv', sep='\t')
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
-pca.fit(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25]).transpose())
-pca_coords = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25]).transpose())
+pca.fit(transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25]).transpose())
+pca_coords = pca.transform(transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25]).transpose())
 
 
 # I generate a separate set of coordinates for the external data as I would like to project them by themselves. The way this works in that a list of data/annotations dataframes is passed to the plot function. The first set of data/annotations is the base and subsequent sets are projected on. The plot the pca is saved as a .html in the <out_file> location.
@@ -134,7 +152,7 @@ pca_coords = pca.transform(functions.transform_to_percentile(data.loc[genes.Plat
 # In[ ]:
 
 
-pca_coords_ext = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25][ext_annotations.index]).transpose())
+pca_coords_ext = pca.transform(transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25][ext_annotations.index]).transpose())
 
 #First dataframes in the list of the base coordinates, following dataframes are projected on
 functions.plot_pca([pca_coords, pca_coords_ext], [annotations, ext_annotations],pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset'], colour_dict={}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_atlas_with_external.html')
@@ -211,8 +229,8 @@ pluripotent_annotations.to_csv('../data/pluripotent_RNASeq_annotations.tsv', sep
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
-pca.fit(functions.transform_to_percentile(pluripotent_data.loc[pluripotent_genes.Platform_VarFraction.values<=0.2]).transpose())
-pca_coords = pca.transform(functions.transform_to_percentile(pluripotent_data.loc[pluripotent_genes.Platform_VarFraction.values<=0.2]).transpose())
+pca.fit(transform_to_percentile(pluripotent_data.loc[pluripotent_genes.Platform_VarFraction.values<=0.2]).transpose())
+pca_coords = pca.transform(transform_to_percentile(pluripotent_data.loc[pluripotent_genes.Platform_VarFraction.values<=0.2]).transpose())
 
 
 # Plot the stemcell only PCA (and save it).
@@ -221,4 +239,10 @@ pca_coords = pca.transform(functions.transform_to_percentile(pluripotent_data.lo
 
 
 functions.plot_pca(pca_coords, pluripotent_annotations,pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset'], colour_dict={}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_only_atlas_with_external.html')
+
+
+# In[ ]:
+
+
+
 

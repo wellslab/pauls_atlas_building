@@ -13,29 +13,6 @@ from plotly.graph_objs import *
 import plotly.figure_factory as ff
 import plotly.io
 
-def transform_to_percentile(dataframe):
-
-    '''
-    Apparently this is properly called the spearman rank
-
-    Parameters:
-    ----------
-
-    dataframe
-        Dataframe containing expression values, index as variables (genes), columns as samples
-
-    Returns:
-    -----------
-
-    transformed_dataframe
-        Dataframe with expression as rank (percentile) values
-
-    '''
-
-    transformed_dataframe = (dataframe.shape[0] - dataframe.rank(axis=0, ascending=False, na_option='bottom')+1)/(1+dataframe.shape[0])
-
-    return transformed_dataframe
-
 
 def calculate_platform_dependence(data, annotations):
 
