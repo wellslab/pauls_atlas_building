@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
-import sklearn
-import scipy
-import gc
+import gc, os, psutil, sys, scipy, sklearn
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 import sklearn.decomposition
@@ -64,8 +62,8 @@ def calculate_platform_dependence(data, annotations):
     warnings.simplefilter('ignore', ConvergenceWarning)
 
     output_df = pd.DataFrame(index=data.index, columns=['Platform_VarFraction'])
-    data = data[annotations.index].transpose()
-    data['Platform_Category'] = annotations['Platform_Category']
+    data = data.transpose()
+    data['Platform_Category'] = annotations['Platform_Category'].values
 
     for i_gene in data.columns.values[:-1]:
 
@@ -184,7 +182,7 @@ def resample_clustering(data, annotations, resample_strategy, n_resamples=200, n
  
     base_platform_dependence = calculate_platform_dependence(data, annotations)  
  
-    base_genes  = base_platform_dependence.index.values[base_platform_dependence.VarFraction.values<=0.2]
+    base_genes  = base_platform_dependence.index.values[base_platform_dependence.Platform_VarFraction.values<=0.2]
     base_data   = transform_to_percentile(data.loc[base_genes].copy())
     pca         = sklearn.decomposition.PCA(n_components=3, svd_solver='full')
     base_output = pca.fit_transform(base_data.transpose())
@@ -217,9 +215,11 @@ def resample_clustering(data, annotations, resample_strategy, n_resamples=200, n
             print("Bootstrap resampling number %d" %i_iter)
             i_annotations = annotations.copy().sample(frac=1.0, replace=True)
             i_data        = transform_to_percentile(data[i_annotations.index.values].copy())
-
+    
+        sys.stdout.flush()
+ 
         i_varPart  = calculate_platform_dependence(i_data, i_annotations) 
-        i_cut_data = transform_to_percentile(i_data.loc[i_varPart.loc[i_varPart['VarFraction']<=0.2].index.values])  
+        i_cut_data = transform_to_percentile(i_data.loc[i_varPart.loc[i_varPart['Platform_VarFraction']<=0.2].index.values])  
         i_output   = pca.fit_transform(i_cut_data.transpose())
     
         for i in range(len(n_clusters_list)):
@@ -227,12 +227,13 @@ def resample_clustering(data, annotations, resample_strategy, n_resamples=200, n
             clusterer       = KMeans(n_clusters=n_clusters_list[i])
             i_clustering    = clusterer.fit_predict(i_output)
             i_clustering_df = pd.DataFrame(index=i_data.columns, columns=[i_iter], data = i_clustering.astype(int)) 
+            i_clustering_df.drop_duplicates(inplace=True)
 
             resampled_clusters_list[i] = resampled_clusters_list[i].merge(i_clustering_df, how='left', left_index=True, right_index=True)
     
         gc.collect()    
     
-        retained_genes_list.append(i_varPart.loc[i_varPart['VarFraction']<=0.2].index.values)
+        retained_genes_list.append(i_varPart.loc[i_varPart['Platform_VarFraction']<=0.2].index.values)
 
     results = [calc_H_index(resampled_clusters_list[i]) for i in range(len(n_clusters_list))]
     
