@@ -23,7 +23,7 @@ blood_atlas_colours = {key:value[0] for key, value in zip(blood_atlas_colours.in
 
 # Reading in data, including nadias annotations, excel spreadsheet with multiple tabs
 
-# In[2]:
+# In[ ]:
 
 
 data           = pd.read_csv('/Users/pwangel/Downloads/blood_atlas_expression_v7.1.tsv', sep='\t', index_col=0)
@@ -32,6 +32,12 @@ annotations    = pd.read_csv('/Users/pwangel/PlotlyWorkspace/combine_data/blood/
 
 ext_data       = pd.read_csv('/Users/pwangel/Downloads/DC_expression_matrix.txt', sep='\t', index_col=0)
 ext_annotations = pd.read_csv('/Users/pwangel/Downloads/dc_atlas_samples.txt', sep='\t', index_col=0) 
+
+
+# In[ ]:
+
+
+
 
 
 # In[3]:

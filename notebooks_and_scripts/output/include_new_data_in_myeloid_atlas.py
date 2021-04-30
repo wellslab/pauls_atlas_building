@@ -26,18 +26,12 @@ blood_atlas_colours = {key:value[0] for key, value in zip(blood_atlas_colours.in
 # In[9]:
 
 
-data           = pd.read_csv('/Users/pwangel/Downloads/myeloid_atlas_expression_v7.1.tsv', sep='\t', index_col=0)
-annotations    = pd.read_csv('/Users/pwangel/PlotlyWorkspace/combine_data/blood/outputs_for_front_end/iMac_annotations.tsv', sep='\t', index_col=0)
-genes          = pd.read_csv('/Users/pwangel/Downloads/myeloid_atlas_genes.tsv', sep='\t', index_col=0)
+data            = pd.read_csv('/Users/pwangel/Downloads/myeloid_atlas_expression_v7.1.tsv', sep='\t', index_col=0)
+annotations     = pd.read_csv('/Users/pwangel/PlotlyWorkspace/combine_data/blood/outputs_for_front_end/iMac_annotations.tsv', sep='\t', index_col=0)
+genes           = pd.read_csv('/Users/pwangel/Downloads/myeloid_atlas_genes.tsv', sep='\t', index_col=0)
 
-ext_data       = pd.read_csv('/Users/pwangel/Downloads/DC_expression_matrix.txt', sep='\t', index_col=0)
+ext_data        = pd.read_csv('/Users/pwangel/Downloads/DC_expression_matrix.txt', sep='\t', index_col=0)
 ext_annotations = pd.read_csv('/Users/pwangel/Downloads/dc_atlas_samples.txt', sep='\t', index_col=0) 
-
-
-# In[5]:
-
-
-np.sort(annotations.Dataset.unique())
 
 
 # In[10]:

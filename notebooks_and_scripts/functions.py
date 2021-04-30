@@ -261,7 +261,7 @@ def calc_H_index(clustering_dataframe):
 
     h_index_per_cluster = []
 
-    for i_cluster in clustering_dataframe.iloc[:,0].unique():
+    for i_cluster in sorted(clustering_dataframe.iloc[:,0].unique()):
 
         samples_in_cluster_i = clustering_dataframe.loc[clustering_dataframe.iloc[:,0].values == i_cluster].index.values
         max_similarity_list  = []

@@ -7,7 +7,7 @@
 # 
 # This notebook also reads in some externally processed data, which we hope to process ourselves and include in the near future. These external datasets are recognisable by the GSE in their filename.
 
-# In[2]:
+# In[1]:
 
 
 import numpy as np
@@ -19,19 +19,32 @@ from general_processing.process_functions import convert_symbols_to_ensembl
 
 # Reading in expression data and metadata (annotations.tsv). For plotting, a 'display_metadata' field is required in the annotations dataframe, so I have used a temporary column here, the 'generic_sample_type'. To see the format of these dataframes just have a look at the example .tsv files I have here.
 
-# In[2]:
+# In[5]:
 
 
 data        = pd.read_csv('../data/pluripotent_atlas_data.tsv', sep='\t', index_col=0)
 annotations = pd.read_csv('../data/pluripotent_annotations.tsv', sep='\t', index_col=0)
+#data = pd.read_hdf('/Users/pwangel/Data/all_data', 'all_data')
+#annotations = pd.read_hdf('/Users/pwangel/Data/annotations')
+
+lizzis_anno    = pd.read_csv('/Users/pwangel/PlotlyWorkspace/combine_data/naive_stemcells/stemcell_annotations.tsv', sep='\t', index_col=0)
+#lizzis_anno.index = [str(i)+";"+str(j) for i, j in zip(lizzis_anno.chip_id, lizzis_anno.Dataset.astype(int))]
+annotations = annotations.merge(lizzis_anno[['LM_Group_COLOR']], how='left', left_index=True, right_index=True)
+annotations.LM_Group_COLOR = annotations[['LM_Group_COLOR']].fillna("Unannotated")
 
 annotations['display_metadata'] = annotations.generic_sample_type
 #annotations = annotations.loc[annotations.Platform_Category!='Illumina V2']
 
 
+# In[7]:
+
+
+annotations.shape
+
+
 # This is a temporary hack to include some externally processed data and see how the atlas would look. They look good so I recommend they be processed with the stemformatics pipeline and included. I have not placed the external data into my git repo, it would be simpler just to process with s4m pipeline.
 
-# In[3]:
+# In[10]:
 
 
 df1 = pd.read_csv('/Users/pwangel/Data/External_Data/GSE114873/GSE114873_Cufflinks_output_FPKM_and_Gene_Names.txt', sep='\t', index_col=0)[['condition', 'replicate', 'raw_frags']]
@@ -55,7 +68,7 @@ df4 = pd.read_csv('/Users/pwangel/Data/External_Data/GSE167089/GSE167089_counts.
 
 # As these external datasets do not have metadata, I created my own temporary external annotations dataframe.
 
-# In[4]:
+# In[11]:
 
 
 ext_annotations = pd.DataFrame(index=df1.columns.to_list()+df2.columns.to_list()+df3.columns.to_list()+df4.columns.to_list())
@@ -69,7 +82,7 @@ ext_annotations['display_metadata']  = [str(i_dataset)+'<br>'+str(i_sample) for 
 # 
 # Also include the externally processed data in this step.
 
-# In[ ]:
+# In[12]:
 
 
 #This tsv has the datasets of biological interest
@@ -86,14 +99,14 @@ data = data[annotations.index]
 
 # Before we make the atlas, we will do some simple analysis on the data. In particular I would like to see the distribution of experimental platform. It would also be nice to see the cell type distributions, but without the proper metadata it is difficult
 
-# In[6]:
+# In[13]:
 
 
 with pd.option_context('display.max_rows', None, 'display.max_columns', None):
     print(annotations[['Dataset', 'Platform_Category']].drop_duplicates().groupby('Platform_Category').size())
 
 
-# In[7]:
+# In[14]:
 
 
 with pd.option_context('display.max_rows', None, 'display.max_columns', None):
@@ -102,7 +115,7 @@ with pd.option_context('display.max_rows', None, 'display.max_columns', None):
 
 # Now to actually make the atlas. First step in the atlas two step process: transform expression values to percentile values.
 
-# In[8]:
+# In[15]:
 
 
 data = functions.transform_to_percentile(data)
@@ -110,18 +123,18 @@ data = functions.transform_to_percentile(data)
 
 # Second step: model the influence of platform upon expression for each gene. As this can take a while, I often save the results and just read them in rather than recompute them. In this case the results are saved in 'pluripotent_atlas_genes_with_ext.tsv'.
 
-# In[9]:
+# In[16]:
 
 
-genes = functions.calculate_platform_dependence(data, annotations)
-genes.to_csv('../data/pluripotent_atlas_genes_with_ext.tsv', sep='\t')
+#genes = functions.calculate_platform_dependence(data, annotations)
+#genes.to_csv('../data/pluripotent_atlas_genes_with_ext.tsv', sep='\t')
 #genes = pd.read_csv('../data/pluripotent_atlas_genes.tsv', sep='\t')
-#genes = pd.read_csv('../data/pluripotent_atlas_genes_with_ext.tsv', sep='\t') 
+genes = pd.read_csv('../data/pluripotent_atlas_genes_with_ext.tsv', sep='\t') 
 
 
 # Run the PCA on the expression data of the filtered, transformed genes. The value of the gene filter threshold is 0.25. I have not looked closely at this value. Perhaps a higher value would allow more components into the PCA. 
 
-# In[10]:
+# In[17]:
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
@@ -131,7 +144,7 @@ pca_coords = pca.transform(functions.transform_to_percentile(data.loc[genes.Plat
 
 # I generate a separate set of coordinates for the external data as I would like to project them by themselves. The way this works in that a list of data/annotations dataframes is passed to the plot function. The first set of data/annotations is the base and subsequent sets are projected on. The plot the pca is saved as a .html in the <out_file> location.
 
-# In[ ]:
+# In[18]:
 
 
 pca_coords_ext = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25][ext_annotations.index]).transpose())
@@ -142,7 +155,7 @@ functions.plot_pca([pca_coords, pca_coords_ext], [annotations, ext_annotations],
 
 # Now try to 'zoom in' on the pluripotent cells (isolate them by applying k means clustering). This is a fairly rough way to identify the samples that are relevant to the 'naive' vs 'primed' analysis. I want stem cells only, no differentiated samples, this is best cleared up by the biological annotations but k means will do for now.
 
-# In[12]:
+# In[19]:
 
 
 kmeans = sklearn.cluster.KMeans(n_clusters=4).fit(pca_coords)
@@ -152,18 +165,18 @@ ext_annotations['K Means'] = annotations['K Means'].loc[ext_annotations.index]
 
 # Plot the PCA again but now with the kmeans clusters, so we can identify the biology of each cluster.
 
-# In[13]:
+# In[20]:
 
 
-functions.plot_pca(pca_coords, annotations,pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset', 'K Means'], colour_dict={}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_kmeans_atlas_with_external.html')
+functions.plot_pca(pca_coords, annotations,pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset', 'K Means', 'LM_Group_COLOR'],                    colour_dict={"Unannotated":'grey'}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_kmeans_atlas_with_external.html')
 
 
 # Essentially a repeat of the previous process to generate an atlas, but now selecting only stem cells first. WARNING: the number label of the stemcells group in the kmeans clustering is random each time you run it. 
 
-# In[15]:
+# In[21]:
 
 
-pluripotent_annotations = annotations.loc[(annotations['K Means']==1) | np.in1d(annotations.Dataset.values, [7253, 7240, 7124, 7135, 'GSE137295', 'GSE123055', 'GSE114873', 'GSE167089'])]
+pluripotent_annotations = annotations.loc[(annotations['K Means']==0) | np.in1d(annotations.Dataset.values, [7253, 7240, 7124, 7135, 'GSE137295', 'GSE123055', 'GSE114873', 'GSE167089'])]
 pluripotent_data = data[pluripotent_annotations.index]
 #pluripotent_genes = functions.calculate_platform_dependence(pluripotent_data, pluripotent_annotations)
 #pluripotent_genes.to_csv('../data/pluripotent_only_atlas_genes_with_ext.tsv', sep='\t')
@@ -199,7 +212,7 @@ with pd.option_context('display.max_rows', None, 'display.max_columns', None):
 
 # Save this subset for future fun
 
-# In[20]:
+# In[22]:
 
 
 pluripotent_annotations.to_csv('../data/pluripotent_RNASeq_annotations.tsv', sep='\t')
@@ -207,7 +220,7 @@ pluripotent_annotations.to_csv('../data/pluripotent_RNASeq_annotations.tsv', sep
 
 # Run the PCA again, using a threshold of 0.2. The general pattern with these thresholds is that the narrower the biological range of samples is, the stricter the threshold must be. Lower biological variation means a greater fraction of platform variation.
 
-# In[21]:
+# In[23]:
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
@@ -217,8 +230,8 @@ pca_coords = pca.transform(functions.transform_to_percentile(pluripotent_data.lo
 
 # Plot the stemcell only PCA (and save it).
 
-# In[22]:
+# In[24]:
 
 
-functions.plot_pca(pca_coords, pluripotent_annotations,pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset'], colour_dict={}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_only_atlas_with_external.html')
+functions.plot_pca(pca_coords, pluripotent_annotations,pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset', 'LM_Group_COLOR'],                    colour_dict={"Unannotated":"grey"}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_only_atlas_with_external.html')
 
