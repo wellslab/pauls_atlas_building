@@ -191,8 +191,11 @@ def resample_clustering(data, annotations, resample_strategy, n_resamples=200, n
 
     retained_genes_list = [base_genes]
 
-    resampled_clusters_list = [pd.DataFrame(KMeans(n_clusters=i_clusters).fit_predict(base_output), index=base_data.columns, columns=['Base']) \
-                                for i_clusters in n_clusters_list]    
+    resamples_clusters_list = []
+    for i_clusters in n_clusters_list:
+        #This is optional to save the base clusters 
+        #pd.DataFrame(KMeans(n_clusters=i_clusters).fit_predict(base_output), index=base_data.columns, columns=['Base']).to_csv("<path/to/file_%d" %int(i_clusters))
+        resampled_clusters_list.append(pd.DataFrame(KMeans(n_clusters=i_clusters).fit_predict(base_output), index=base_data.columns, columns=['Base']))    
 
     if resample_strategy=='bootstrap':
         iterations = np.arange(n_resamples)
