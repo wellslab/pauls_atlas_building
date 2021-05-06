@@ -457,7 +457,9 @@ def plot_pca(pca_coords, annotations, pca, labels, colour_dict, pcs=[1,2,3], out
     for i_label in labels:
         for i_annotation in annotations:
             if (i_annotation[i_label].dtype==np.float64()) and (i_label!='Dataset'):
-                visibility_df.loc[counter] = [i_label, i_label]
+                visibility_df.loc[counter] = [i_label+'Cont', i_label]
+                counter+=1
+                visibility_df.loc[counter] = [i_label+'Nan', i_label]
                 counter+=1
             else:
                 for i_type in i_annotation[i_label].unique().astype(str):
@@ -485,12 +487,18 @@ def plot_pca(pca_coords, annotations, pca, labels, colour_dict, pcs=[1,2,3], out
                 opac = 0.9
 
             if (i_annotation[i_label].dtype==np.float64()) and (i_label!='Dataset'):
-    
-                fig.add_trace(Scatter3d(x=i_pca_coords[:,pcs[0]-1], y=i_pca_coords[:,pcs[1]-1], z=i_pca_coords[:,pcs[2]-1], 
-                    mode='markers', text=i_annotation.display_metadata.values, 
+
+                sel_not_nan = ~pd.isnull(i_annotation[i_label]).values   
+                fig.add_trace(Scatter3d(x=i_pca_coords[sel_not_nan,pcs[0]-1], y=i_pca_coords[sel_not_nan,pcs[1]-1], z=i_pca_coords[sel_not_nan,pcs[2]-1], 
+                    mode='markers', text=[str(i)+'<br>'+str(j) for i, j in zip(i_annotation[i_label].values[sel_not_nan], i_annotation.display_metadata.values[sel_not_nan])], 
                     opacity=opac, name=i_label, visible=False, 
-                    marker=dict(size=5, color=i_annotation[i_label].values,
-                    colorscale = 'viridis')))
+                    marker=dict(size=5, color=i_annotation[i_label].values[sel_not_nan],
+                    colorscale = 'viridis', colorbar=dict(thickness=20))))
+
+                fig.add_trace(Scatter3d(x=i_pca_coords[~sel_not_nan,pcs[0]-1], y=i_pca_coords[~sel_not_nan,pcs[1]-1], z=i_pca_coords[~sel_not_nan,pcs[2]-1], 
+                    mode='markers', text=i_annotation.display_metadata.values[~sel_not_nan], 
+                    opacity=0.3, name=i_label, visible=False, 
+                    marker=dict(size=5, color='grey')))
             else:
                 for i_type in i_annotation[i_label].unique().astype(str):
     
