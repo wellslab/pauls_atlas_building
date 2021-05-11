@@ -111,3 +111,52 @@ def convert_symbols_to_ensembl(dataframe):
     dataframe = dataframe.loc[~dataframe.index.isnull()]
 
     return dataframe
+
+def transform_to_percentile(dataframe):
+
+    '''
+    Apparently this is properly called the spearman rank
+
+    Parameters:
+    ----------
+
+    dataframe
+        Dataframe containing expression values, index as variables (genes), columns as samples
+
+    Returns:
+    -----------
+
+    transformed_dataframe
+        Dataframe with expression as rank (percentile) values
+
+    '''
+
+    transformed_dataframe = (dataframe.shape[0] - dataframe.rank(axis=0, ascending=False, na_option='bottom')+1)/(1+dataframe.shape[0])
+
+    return transformed_dataframe
+
+def retrieve_expression_data(dataframe):
+
+    '''
+    Makes http get requests to stemformatics api to retrieve expression data based upon datasets in the dataframe
+
+    Parameters:
+    ----------
+
+    dataframe
+        Dataframe containing annotations, requires a 'Dataset' column
+    '''
+
+    import requests, io
+
+    expression = pd.DataFrame()
+
+    for i_dataset in dataframe.Dataset.unique():
+        url = 'https://api-dev.stemformatics.org/datasets/%d/expression?as_file=True&key=raw' %i_dataset
+        req = requests.get(url, verify=False) #Lol, should we trust s4m?
+        i_df = pd.read_csv(io.StringIO(req.text), sep='\t', header=0, index_col=0)
+        #i_df.columns = [str(int(i_dataset))+'_'+str(i_name) for i_name in i_df.columns.values] #This ought to be the right format for s4m going forward
+
+    return expression
+
+
