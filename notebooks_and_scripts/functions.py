@@ -140,7 +140,7 @@ def calculate_celltype_dependence(data, annotations, gene=None, pval=False):
 
     return output_df
 
-def resample_clustering(data, annotations, resample_strategy, n_resamples=200, n_clusters_list=[3,4]):
+def resample_clustering(data, annotations, resample_strategy, n_resamples=200, n_clusters_list=[3,4], ids_to_isolate=None, base_output_file=None):
     
     ''' 
     This cumbersome function performs either jack-knife or bootstrap resampling. 
@@ -158,13 +158,19 @@ def resample_clustering(data, annotations, resample_strategy, n_resamples=200, n
         Must have a 'Platform_Category' column and a 'Dataset' column
 
     resample_strategy
-        Either 'bootstrap' or 'jackknife'
+        Either 'bootstrap', 'jackknife' or None. If it is None then it will simply perform the clustering algorithm n_resamples times.
 
     n_resamples
         Number of bootstrap resampling iterations if resample_stragety is 'bootstrap'
 
     n_clusters_list
         List of cluster parameters, each value is tested for clustering stability independently
+
+    id_to_isolate
+        Will only perform clustering upon this subset of samples
+
+    base_output_file
+        File to save the base clustering values to
 
     Returns
     ----------
@@ -185,7 +191,7 @@ def resample_clustering(data, annotations, resample_strategy, n_resamples=200, n
     base_genes  = base_platform_dependence.index.values[base_platform_dependence.Platform_VarFraction.values<=0.2]
     base_data   = transform_to_percentile(data.loc[base_genes].copy())
     pca         = sklearn.decomposition.PCA(n_components=3, svd_solver='full')
-    base_output = pca.fit_transform(base_data.transpose())
+    base_output = pd.DataFrame(pca.fit_transform(base_data.transpose()), index=base_data.columns, columns = ['PC1', 'PC2', 'PC3'])
     
     print("Utlising %d genes as baseline expression data\n" %base_genes.shape[0])
 
@@ -193,11 +199,18 @@ def resample_clustering(data, annotations, resample_strategy, n_resamples=200, n
 
     resamples_clusters_list = []
     for i_clusters in n_clusters_list:
-        #This is optional to save the base clusters 
-        #pd.DataFrame(KMeans(n_clusters=i_clusters).fit_predict(base_output), index=base_data.columns, columns=['Base']).to_csv("<path/to/file_%d" %int(i_clusters))
-        resampled_clusters_list.append(pd.DataFrame(KMeans(n_clusters=i_clusters).fit_predict(base_output), index=base_data.columns, columns=['Base']))    
 
-    if resample_strategy=='bootstrap':
+        if ids_to_isolate is None:
+            clustering_df = pd.DataFrame(KMeans(n_clusters=i_clusters).fit_predict(base_output), index=base_data.columns, columns=['Base'])
+        else:
+            clustering_df = pd.DataFrame(KMeans(n_clusters=i_clusters).fit_predict(base_output.loc[ids_to_isolate]), index=base_output.loc[ids_to_isolate].index, columns=['Base'])
+
+        #This is optional to save the base clusters
+        if base_output_file is not None:
+            clustering_df.to_csv(base_output_file+"_%d" %int(i_clusters))
+        resampled_clusters_list.append(clustering_df)    
+
+    if (resample_strategy=='bootstrap') or (resample_strategy is None):
         iterations = np.arange(n_resamples)
     elif resample_strategy=='jackknife':
         iterations = np.arange(annotations['Dataset'].unique().shape[0])
@@ -212,26 +225,36 @@ def resample_clustering(data, annotations, resample_strategy, n_resamples=200, n
             print("Omitting dataset %d" %annotations['Dataset'].unique()[i_iter])
             i_annotations = annotations.copy().loc[annotations['Dataset'] != annotations['Dataset'].unique()[i_iter]]
             i_data        = transform_to_percentile(data[i_annotations.index.values].copy())
+            i_varPart  = calculate_platform_dependence(i_data, i_annotations) 
+            i_cut_data = transform_to_percentile(i_data.loc[i_varPart.loc[i_varPart['Platform_VarFraction']<=0.2].index.values])  
          
-        if resample_strategy=='bootstrap':
+        elif resample_strategy=='bootstrap':
  
             print("Bootstrap resampling number %d" %i_iter)
             i_annotations = annotations.copy().sample(frac=1.0, replace=True)
             i_data        = transform_to_percentile(data[i_annotations.index.values].copy())
+            i_varPart  = calculate_platform_dependence(i_data, i_annotations) 
+            i_cut_data = transform_to_percentile(i_data.loc[i_varPart.loc[i_varPart['Platform_VarFraction']<=0.2].index.values])  
+
+        elif resample_strategy is None:
+ 
+            print("Non resampling number %d" %i_iter)
+            i_annotations = annotations.copy()
+            i_cut_data    = base_data.copy()
+            i_varPart  = base_platform_dependence.copy()
     
         sys.stdout.flush()
  
-        i_varPart  = calculate_platform_dependence(i_data, i_annotations) 
-        i_cut_data = transform_to_percentile(i_data.loc[i_varPart.loc[i_varPart['Platform_VarFraction']<=0.2].index.values])  
-        i_output   = pca.fit_transform(i_cut_data.transpose())
+        i_output   = pd.DataFrame(pca.fit_transform(i_cut_data.transpose()), index=i_cut_data.columns, columns = ['PC1', 'PC2', 'PC3'])
     
         for i in range(len(n_clusters_list)):
   
-            clusterer       = KMeans(n_clusters=n_clusters_list[i])
-            i_clustering    = clusterer.fit_predict(i_output)
-            i_clustering_df = pd.DataFrame(index=i_data.columns, columns=[i_iter], data = i_clustering.astype(int)) 
-            i_clustering_df.drop_duplicates(inplace=True)
+            if ids_to_isolate is None:
+                i_clustering_df = pd.DataFrame(KMeans(n_clusters=i).fit_predict(i_output).astype(int), index=i_output.index, columns=[i_iter])
+            else:
+                i_clustering_df = pd.DataFrame(KMeans(n_clusters=i).fit_predict(i_output.loc[ids_to_isolate]).astype(int), index=i_output.loc[ids_to_isolate].index, columns=['i_iter'])
 
+            i_clustering_df.drop_duplicates(inplace=True)
             resampled_clusters_list[i] = resampled_clusters_list[i].merge(i_clustering_df, how='left', left_index=True, right_index=True)
     
         gc.collect()    
