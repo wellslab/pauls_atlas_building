@@ -29,12 +29,12 @@ def remove_microarray_duplicates(data, maps):
 
     print("\nGoing to remove duplicates from dataset containing %d probes\n" %len(data))
 
-    maps = maps.loc[numpy.intersect1d(maps.index.values, data.index.values)]
+    maps = maps.loc[np.intersect1d(maps.index.values, data.index.values)]
     data = data.assign(Mean=data.mean(axis=1))
 
     print("> Dataset has %d (%d unique) probes before removing the devious false haplotype mapping ids" %(len(maps), len(maps.index.unique())))
 
-    maps = maps.loc[numpy.in1d(maps.Gene.values.astype(str), main_ensembl_ids)]
+    maps = maps.loc[np.in1d(maps.Gene.values.astype(str), main_ensembl_ids)]
     print("> Mapping has been reduced to %d (%d unique) probes" %(maps.shape[0], len(maps.index.unique().values)))
 
     maps = maps.loc[maps.index.value_counts()[maps.index.value_counts()==1].index.values]
