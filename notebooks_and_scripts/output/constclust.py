@@ -3,7 +3,7 @@
 
 # This is a notebook used to analysis constclust results. The majority of constclust is run on hpc.
 
-# In[4]:
+# In[1]:
 
 
 from constclust import cluster, reconcile, plotting
@@ -29,6 +29,18 @@ params = pd.read_pickle("/Users/pwangel/Data/Single_Cell/Gut_Colon/params.pkl")
 clusterings = pd.read_pickle("/Users/pwangel/Data/Single_Cell/Gut_Colon/clusterings.pkl")
 
 data = sc.read_h5ad('/Users/pwangel/Data/Single_Cell/Gut_Colon/Colon_cell_atlas_scrublet.h5ad')
+
+
+# In[34]:
+
+
+blah = pd.DataFrame.sparse.from_spmatrix(data.X[sel,:], index=data.obs_names.values[sel], columns=data.var_names.values).transpose()
+
+
+# In[33]:
+
+
+blah
 
 
 # In[17]:

@@ -30,7 +30,7 @@ colour_dict = {}
 print(data.shape, annotations.shape)
 
 
-# In[98]:
+# In[12]:
 
 
 ext_data1       = pd.read_csv('/Users/pwangel/Data/External_Data/GSE136731/GSE136731_expression.tsv', sep='\t', index_col=0)
@@ -83,29 +83,30 @@ print(ext_data.shape, ext_annotations.shape)
 #annotations = pd.concat([annotations, ext_annotations])
 
 
-# In[5]:
+# In[3]:
 
 
 weird_index = annotations.loc[(annotations['Platform Category']=='Illumina V4')&(annotations['Sample Source']=='in vivo')].index
 annotations.loc[weird_index, 'Platform Category'] = 'Illumina V4 2'
+annotations = annotations.loc[~np.in1d(annotations['Tissue Type'].values, ['skin', 'spleen'])]
 
 
-# In[7]:
+# In[4]:
 
 
-data = functions.transform_to_percentile(data)
+data = functions.transform_to_percentile(data[annotations.index])
 
 
 # Only need to compute gene variance fraction if not done already, in the above we have already read a previously calculated version into the gene dataframe
 
-# In[8]:
+# In[5]:
 
 
 annotations.rename(columns={'Platform Category':'Platform_Category'}, inplace=True)
 genes = functions.calculate_platform_dependence(data, annotations)
 
 
-# In[9]:
+# In[6]:
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
@@ -113,14 +114,21 @@ pca.fit(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.va
 pca_coords = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=1.0]).transpose())
 
 
-# In[47]:
+# In[7]:
 
 
 annotations['display_metadata'] = annotations.index
-functions.plot_pca(pca_coords, annotations,pca,                    labels=['Cell Type', 'Sample Source', 'Platform_Category', 'Dataset'], colour_dict=colour_dict)#, out_file='/Users/pwangel/Downloads/dc_atlas.html')
+
+functions.plot_pca(pca_coords, annotations,pca,                    labels=['Cell Type', 'Sample Source', 'Platform_Category', 'Dataset', 'Tissue Type'], colour_dict=colour_dict)#, out_file='/Users/pwangel/Downloads/dc_atlas.html')
 
 
-# In[11]:
+# In[12]:
+
+
+pd.DataFrame(index=data.index, data=pca.components_[2], columns=['Loading']).to_csv("/Users/pwangel/Downloads/mystery_genes.tsv", sep='\t')
+
+
+# In[ ]:
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
@@ -130,14 +138,14 @@ pca_coords = pca.transform(functions.transform_to_percentile(data.loc[genes.Plat
 
 # Plot the pca
 
-# In[12]:
+# In[ ]:
 
 
 annotations['display_metadata'] = annotations.index
 functions.plot_pca(pca_coords, annotations,pca,                    labels=['Cell Type', 'Sample Source', 'Platform_Category', 'Dataset'], colour_dict=colour_dict)#, out_file='/Users/pwangel/Downloads/dc_atlas.html')
 
 
-# In[99]:
+# In[ ]:
 
 
 ext_data = ext_data.loc[genes.loc[genes.Platform_VarFraction.values<=0.15].index]
@@ -148,14 +156,14 @@ ext_coords = pca.transform(functions.transform_to_percentile(ext_data).transpose
 #ext_annotations.rename(columns={'Platform Category':'Platform_Category'}, inplace=True)
 
 
-# In[100]:
+# In[ ]:
 
 
 ext_annotations['Sample Source'] = ext_annotations['Sample Source'].str.replace('_', '')
 ext_annotations['Platform_Category'] = ext_annotations['Platform_Category'].str.replace('_', '')
 
 
-# In[102]:
+# In[ ]:
 
 
 functions.plot_pca([pca_coords, ext_coords], [annotations, ext_annotations],pca,                    labels=['Cell Type', 'Sample Source', 'Platform_Category', 'Dataset', 'N Zeroes'], colour_dict=colour_dict)#, out_file='/Users/pwangel/Downloads/dc_atlas.html')
