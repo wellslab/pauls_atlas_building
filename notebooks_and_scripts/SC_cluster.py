@@ -13,6 +13,7 @@ gut_colon_data = general_processing.SC_reader.read_gut_atlas_colon()
 # Find and remove doublets
 
 sce.pp.scrublet(gut_colon_data)
+gut_colon_data.write_h5ad("/scratch/yf0/pa5933/Data/Single_Cell/Gut_Colon/Colon_cell_atlas_scrublet.h5ad")
 
 # Cluster using constclust
 
