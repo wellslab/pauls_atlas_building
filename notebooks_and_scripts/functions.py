@@ -505,7 +505,7 @@ def plot_pca(pca_coords, annotations, pca, labels, colour_dict, pcs=[1,2,3], out
             i_pca_coords = pca_coords[i]
 
             if (i==0) and len(annotations)>1:
-                opac = 0.3
+                opac = 0.5
             else:
                 opac = 0.9
 

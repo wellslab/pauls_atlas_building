@@ -7,7 +7,7 @@
 # 
 # This notebook also reads in some externally processed data, which we hope to process ourselves and include in the near future. These external datasets are recognisable by the GSE in their filename.
 
-# In[1]:
+# In[29]:
 
 
 import numpy as np
@@ -19,7 +19,7 @@ from general_processing.process_functions import convert_symbols_to_ensembl
 
 # Reading in expression data and metadata (annotations.tsv). For plotting, a 'display_metadata' field is required in the annotations dataframe, so I have used a temporary column here, the 'generic_sample_type'. To see the format of these dataframes just have a look at the example .tsv files I have here.
 
-# In[60]:
+# In[30]:
 
 
 data        = pd.read_csv('../data/pluripotent_atlas_data.tsv', sep='\t', index_col=0)
@@ -39,16 +39,14 @@ annotations = annotations.merge(day_anno[['Day', 'Year','Feeder']], how='left', 
 annotations['display_metadata'] = annotations.generic_sample_type
 #annotations = annotations.loc[annotations.Platform_Category!='Illumina V2']
 
-
-# In[56]:
-
-
-annotations.shape
+lizzi_genes = pd.read_csv('/Users/pwangel/Downloads/early_embryo_genelists.csv', sep=',')
+for i_col in lizzi_genes.columns:
+    lizzi_genes[i_col] = pd.Series(convert_symbols_to_ensembl(lizzi_genes.copy().set_index(i_col)).index)
 
 
 # This is a temporary hack to include some externally processed data and see how the atlas would look. They look good so I recommend they be processed with the stemformatics pipeline and included. I have not placed the external data into my git repo, it would be simpler just to process with s4m pipeline.
 
-# In[61]:
+# In[31]:
 
 
 df1 = pd.read_csv('/Users/pwangel/Data/External_Data/GSE114873/GSE114873_Cufflinks_output_FPKM_and_Gene_Names.txt', sep='\t', index_col=0)[['condition', 'replicate', 'raw_frags']]
@@ -72,7 +70,7 @@ df4 = pd.read_csv('/Users/pwangel/Data/External_Data/GSE167089/GSE167089_counts.
 
 # As these external datasets do not have metadata, I created my own temporary external annotations dataframe.
 
-# In[62]:
+# In[32]:
 
 
 ext_annotations = pd.DataFrame(index=df1.columns.to_list()+df2.columns.to_list()+df3.columns.to_list()+df4.columns.to_list())
@@ -86,7 +84,7 @@ ext_annotations['display_metadata']  = [str(i_dataset)+'<br>'+str(i_sample) for 
 # 
 # Also include the externally processed data in this step.
 
-# In[63]:
+# In[33]:
 
 
 #This tsv has the datasets of biological interest
@@ -119,7 +117,7 @@ with pd.option_context('display.max_rows', None, 'display.max_columns', None):
 
 # Now to actually make the atlas. First step in the atlas two step process: transform expression values to percentile values.
 
-# In[64]:
+# In[34]:
 
 
 data = functions.transform_to_percentile(data)
@@ -127,7 +125,7 @@ data = functions.transform_to_percentile(data)
 
 # Second step: model the influence of platform upon expression for each gene. As this can take a while, I often save the results and just read them in rather than recompute them. In this case the results are saved in 'pluripotent_atlas_genes_with_ext.tsv'.
 
-# In[28]:
+# In[35]:
 
 
 #genes = functions.calculate_platform_dependence(data, annotations)
@@ -138,7 +136,7 @@ genes = pd.read_csv('../data/pluripotent_atlas_genes_with_ext.tsv', sep='\t')
 
 # Run the PCA on the expression data of the filtered, transformed genes. The value of the gene filter threshold is 0.25. I have not looked closely at this value. Perhaps a higher value would allow more components into the PCA. 
 
-# In[65]:
+# In[36]:
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
@@ -146,20 +144,30 @@ pca.fit(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.va
 pca_coords = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25]).transpose())
 
 
+# Highlight average expression for some gene sets provided by Martin Pera (from Lizzi Masons paper).
+
+# In[46]:
+
+
+for i_set in lizzi_genes.columns:
+    for i_sample in annotations.index:
+        annotations.loc[i_sample, i_set] = data.loc[lizzi_genes[i_set].dropna(),i_sample].mean()
+
+
 # I generate a separate set of coordinates for the external data as I would like to project them by themselves. The way this works in that a list of data/annotations dataframes is passed to the plot function. The first set of data/annotations is the base and subsequent sets are projected on. The plot the pca is saved as a .html in the <out_file> location.
 
-# In[68]:
+# In[44]:
 
 
 pca_coords_ext = pca.transform(functions.transform_to_percentile(data.loc[genes.Platform_VarFraction.values<=0.25][ext_annotations.index]).transpose())
 
 #First dataframes in the list of the base coordinates, following dataframes are projected on
-functions.plot_pca([pca_coords, pca_coords_ext], [annotations, ext_annotations],pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset'], colour_dict={}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_atlas_with_external.html')
+functions.plot_pca([pca_coords, pca_coords_ext], [annotations, ext_annotations],pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset'],                   colour_dict={}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_atlas_with_external.html')
 
 
 # Now try to 'zoom in' on the pluripotent cells (isolate them by applying k means clustering). This is a fairly rough way to identify the samples that are relevant to the 'naive' vs 'primed' analysis. I want stem cells only, no differentiated samples, this is best cleared up by the biological annotations but k means will do for now.
 
-# In[69]:
+# In[40]:
 
 
 kmeans = sklearn.cluster.KMeans(n_clusters=4).fit(pca_coords)
@@ -169,15 +177,15 @@ ext_annotations['K Means'] = annotations['K Means'].loc[ext_annotations.index]
 
 # Plot the PCA again but now with the kmeans clusters, so we can identify the biology of each cluster.
 
-# In[70]:
+# In[48]:
 
 
-functions.plot_pca(pca_coords, annotations,pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset', 'K Means', 'LM_Group_COLOR'],                    colour_dict={"Unannotated":'grey'}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_kmeans_atlas_with_external.html')
+functions.plot_pca(pca_coords, annotations,pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset', 'K Means', 'LM_Group_COLOR']+lizzi_genes.columns.tolist(),                    colour_dict={"Unannotated":'grey'}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_kmeans_atlas_with_external.html')
 
 
 # Essentially a repeat of the previous process to generate an atlas, but now selecting only stem cells first. WARNING: the number label of the stemcells group in the kmeans clustering is random each time you run it. 
 
-# In[71]:
+# In[49]:
 
 
 pluripotent_annotations = annotations.loc[(annotations['K Means']==0) | np.in1d(annotations.Dataset.values, [7253, 7240, 7124, 7135, 'GSE137295', 'GSE123055', 'GSE114873', 'GSE167089'])]
@@ -224,7 +232,7 @@ pluripotent_annotations.to_csv('../data/pluripotent_RNASeq_annotations.tsv', sep
 
 # Run the PCA again, using a threshold of 0.2. The general pattern with these thresholds is that the narrower the biological range of samples is, the stricter the threshold must be. Lower biological variation means a greater fraction of platform variation.
 
-# In[75]:
+# In[51]:
 
 
 pca        = sklearn.decomposition.PCA(n_components=10, svd_solver='full')
@@ -232,143 +240,10 @@ pca.fit(functions.transform_to_percentile(pluripotent_data.loc[pluripotent_genes
 pca_coords = pca.transform(functions.transform_to_percentile(pluripotent_data.loc[pluripotent_genes.Platform_VarFraction.values<=0.2]).transpose())
 
 
-# In[76]:
-
-
-annotations.Year.unique()
-
-
 # Plot the stemcell only PCA (and save it).
 
-# In[82]:
+# In[54]:
 
 
-plot_pca(pca_coords, pluripotent_annotations,pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset', 'LM_Group_COLOR', 'Day', 'Year', 'Feeder'],                    colour_dict={"Unannotated":"grey"}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_only_atlas_with_external.html')
-
-
-# In[80]:
-
-
-from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
-from plotly.graph_objs import *
-import plotly.figure_factory as ff
-import plotly.io
-
-
-# In[81]:
-
-
-more_colour_list = ['red', 'green', 'black', 'yellow', 'brown', 'coral', 'sandybrown', 'darkorange', 'olive', 'limegreen', 'lightseagreen']
-
-def plot_pca(pca_coords, annotations, pca, labels, colour_dict, pcs=[1,2,3], out_file=None):
-
-    '''
-    Generate PCA plot of Atlas
-
-    Parameters
-    ----------
-
-    pca_coords
-        coordinates of each sample in pca space, n_samplesxn_dimensions sized np array. Can be a list of such arrays
-
-    annotations
-        Metadata datafrane, index as samples, columns as properties 
-        Must have a 'Platform_Category' column
-        Can be a list of such dataframes
-
-    pca
-        sklearn pca, already been fitted
-
-    labels
-        list of metadata labels to plot, e.g. ['Dataset', 'celltype', 'Platform_Category']
-
-    colour_dict
-        colours to used to plot in a dictionary format
-
-    '''
-
-    if isinstance(pca_coords, np.ndarray):
-        pca_coords = [pca_coords]
-        annotations = [annotations]
-
-    visibility_df = pd.DataFrame(columns=['type', 'label'])
-
-    counter = 0
-    for i_label in labels:
-        for i_annotation in annotations:
-            if (i_annotation[i_label].dtype==np.float64()) and (i_label!='Dataset'):
-                visibility_df.loc[counter] = [i_label+'Cont', i_label]
-                counter+=1
-                visibility_df.loc[counter] = [i_label+'Nan', i_label]
-                counter+=1
-            else:
-                for i_type in i_annotation[i_label].unique().astype(str):
-                    visibility_df.loc[counter] = [i_type, i_label]
-                    counter+=1
-
-    extended_colour_dict = {visibility_df.type.unique()[i_key]:more_colour_list[i_key%len(more_colour_list)] for i_key in                             range(visibility_df.type.unique().shape[0]) if visibility_df.type.unique()[i_key] not in colour_dict.keys()}
-    colour_dict.update(extended_colour_dict)
-
-    fig = Figure()
-
-    button_list = []
-    for i_label in labels:
-
-        visibility_list = (visibility_df.label.values==i_label).tolist()
-
-        for i in range(len(annotations)):
-            i_annotation = annotations[i]
-            i_pca_coords = pca_coords[i]
-
-            if (i==0) and len(annotations)>1:
-                opac = 0.3
-            else:
-                opac = 0.9
-
-            if (i_annotation[i_label].dtype==np.float64()) and (i_label!='Dataset'):
-
-                sel_not_nan = ~pd.isnull(i_annotation[i_label]).values   
-                fig.add_trace(Scatter3d(x=i_pca_coords[sel_not_nan,pcs[0]-1], y=i_pca_coords[sel_not_nan,pcs[1]-1], z=i_pca_coords[sel_not_nan,pcs[2]-1], 
-                    mode='markers', text=[str(i)+'<br>'+str(j) for i, j in zip(i_annotation[i_label].values[sel_not_nan], i_annotation.display_metadata.values[sel_not_nan])], 
-                    opacity=opac, name=i_label, visible=False, 
-                    marker=dict(size=5, color=i_annotation[i_label].values[sel_not_nan],
-                    colorscale = 'viridis', colorbar=dict(thickness=20))))
-
-                fig.add_trace(Scatter3d(x=i_pca_coords[~sel_not_nan,pcs[0]-1], y=i_pca_coords[~sel_not_nan,pcs[1]-1], z=i_pca_coords[~sel_not_nan,pcs[2]-1], 
-                    mode='markers', text=i_annotation.display_metadata.values[~sel_not_nan], 
-                    opacity=0.3, name=i_label, visible=False, 
-                    marker=dict(size=5, color='grey')))
-            else:
-                for i_type in i_annotation[i_label].unique().astype(str):
-    
-                    sel = i_annotation[i_label].values.astype(str) == i_type 
-                    i_colour = colour_dict[i_type]
-
-                    fig.add_trace(Scatter3d(x=i_pca_coords[sel,pcs[0]-1], y=i_pca_coords[sel,pcs[1]-1], z=i_pca_coords[sel,pcs[2]-1], 
-                        mode='markers', text=i_annotation.display_metadata.values[sel], 
-                        opacity=opac, name=i_type, visible=False, 
-                        marker=dict(size=5, color=i_colour)))
-        
-        button_list.append(dict(label=i_label,
-                                method="update",
-                                args=[{"visible": visibility_list},
-                                    {"title": i_label}]))
-      
-        fig.update_layout(
-            updatemenus=[dict(active=0,buttons=button_list,)],
-            scene = dict(xaxis_title='PC%d %%%.2f' %(pcs[0], pca.explained_variance_ratio_[pcs[0]-1]*100),
-                         yaxis_title='PC%d %%%.2f' %(pcs[1], pca.explained_variance_ratio_[pcs[1]-1]*100),
-                         zaxis_title='PC%d %%%.2f' %(pcs[2], pca.explained_variance_ratio_[pcs[2]-1]*100))
-            )
-
-    if out_file is not None:
-        plot(fig, auto_open=False, filename=out_file) 
-    else:
-        iplot(fig)
-
-
-# In[ ]:
-
-
-
+functions.plot_pca(pca_coords, pluripotent_annotations,pca,                    labels=['generic_sample_type', 'Platform_Category', 'Dataset', 'LM_Group_COLOR', 'Day', 'Year', 'Feeder']+lizzi_genes.columns.tolist(),                    colour_dict={"Unannotated":"grey"}, pcs=[1,2,3],                    out_file='/Users/pwangel/Downloads/pluripotent_only_atlas_with_external.html')
 
