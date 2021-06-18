@@ -580,3 +580,47 @@ def plot_dot_plots(dataframe, annotations, cell_property, cell_colour_by, gene_l
         #pyplot.show()
         pyplot.savefig(output_dir+'/%s_dotplot.pdf' %i_gene)
         pyplot.close()
+
+        
+def capybara(atlas, query, anno):
+
+    '''
+    Implementation of https://www.biorxiv.org/content/10.1101/2020.02.17.947390v1.full.pdf
+    Run like this: capybara(atlas expression dataframe, external expression dataframe, annotations['Cell Type])
+    
+    Parameters
+    ----------
+
+    atlas
+        Gene expression dataframe of atlas used as reference
+        
+    query
+        Gene expression dataframe of atlas data that will be classified. Index (genes) should match atlas
+
+    anno
+        Series that contains categories to classify into. E.g. annotations['Cell Type']
+
+    '''
+    
+    from cvxopt import matrix, solvers
+    solvers.options['show_progress'] = False
+
+    n = anno.unique().shape[0]
+    reference = pd.DataFrame(index=anno.unique(), columns=atlas.index)
+    for i_celltype in anno.unique():
+        reference.loc[i_celltype,:] = atlas.loc[:,anno==i_celltype].mean(axis=1)
+    P = matrix(reference.dot(reference.transpose()).values.astype(np.double))
+    G = matrix(0.0, (n,n))
+    G[::n+1] = -1.0
+    h = matrix(0.0, (n,1))
+    A = matrix(1.0, (1,n))
+    b = matrix(1.0)
+    cell_score = pd.DataFrame(columns=anno.unique(), index=query.columns)
+    for i in range(query.shape[1]):
+        y = -1.0*query.iloc[:,i].values.astype(np.double)
+        q = matrix(np.matmul(reference.values, y).astype(np.double))
+        solution = solvers.qp(P, q, G, h, A, b, show_progress=False)
+        cell_score.iloc[i,:] = np.array(solution['x']).reshape(-1)
+    
+    return cell_score        
+       
